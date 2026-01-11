@@ -5,8 +5,8 @@ import (
 	"net/http"
 
 	"github.com/99designs/gqlgen/graphql/handler"
+	"github.com/99designs/gqlgen/graphql/playground"
 	"github.com/kelseyhightower/envconfig"
-	"golang.org/x/tools/playground"
 )
 
 type AppConfig struct {
