@@ -18,6 +18,78 @@ This diagram depicts the containerized runtime: each service runs in its own con
 ![GraphQL](docs/graphQL.png)
 The GraphQL layer provides a unified API surface composed from underlying services. Resolvers coordinate data fetching, and use batching/caching to reduce N+1 calls. The schema exposes key queries (e.g., products, cart) and mutations (e.g., addToCart, checkout), handling authentication, authorization, and error mapping consistently.
 
+### GraphQL Schema
+![GraphQL Schema](docs/graphQL.png)
+The API exposes core types and inputs, with queries for lists and mutations for creation. The schema below reflects the main entities and relationships:
+
+```graphql
+type Account {
+  id: ID!
+  name: String!
+  orders: [Order!]!
+}
+
+type Product {
+  id: ID!
+  name: String!
+  description: String!
+  price: Float!
+}
+
+type OrderedProduct {
+  id: ID!
+  name: String!
+  description: String!
+  price: Float!
+  quantity: Int!
+}
+
+type Order {
+  id: ID!
+  name: String!
+  description: String!
+  totalPrice: Float!
+  products: [OrderedProduct!]!
+}
+
+input AccountInput {
+  name: String!
+}
+
+input ProductInput {
+  name: String!
+  description: String!
+  price: Float!
+}
+
+input OrderProductInput {
+  id: ID!
+  quantity: Int!
+}
+
+input OrderInput {
+  accountId: ID!
+  products: [OrderProductInput!]!
+}
+
+type Query {
+  accounts: [Account!]!
+  products: [Product!]!
+}
+
+type Mutation {
+  createAccount(input: AccountInput!): Account!
+  createProduct(input: ProductInput!): Product!
+  createOrder(input: OrderInput!): Order!
+}
+```
+
+Relationships:
+- Accounts contain orders
+- Orders contain ordered products with quantity and price
+- Products are referenced within orders through OrderedProduct
+- Mutations create accounts, products, and orders; queries list accounts and products
+
 ## Domain Services
 ![Services](docs/services.png)
 Core services encapsulate business capabilities: product/catalog, inventory, pricing, cart, checkout/order, payment, user/auth, shipping, and notifications. Services interact via well-defined contracts; synchronous calls handle request-response flows while events (e.g., OrderCreated) propagate state changes for downstream processing and projections.
