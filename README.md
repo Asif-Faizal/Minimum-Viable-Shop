@@ -1,6 +1,6 @@
 # Minimum-Viable-Shop
 
-A minimal, production-ready foundation for an e-commerce shop. It uses modular services, a GraphQL API layer, and containerized deployment to keep development fast while remaining scalable and maintainable.
+A minimal, production-ready foundation for an e-commerce shop. It uses modular services, a GraphQL API layer, gRPC server for cross-service communication, and containerized deployment to keep development fast while remaining scalable and maintainable.
 
 ## Architecture Overview
 ![Architecture](docs/architecture.png)

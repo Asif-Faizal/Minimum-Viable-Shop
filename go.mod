@@ -5,8 +5,8 @@ go 1.25.1
 require (
 	github.com/99designs/gqlgen v0.17.85
 	github.com/kelseyhightower/envconfig v1.4.0
+	github.com/lib/pq v1.10.9
 	github.com/vektah/gqlparser/v2 v2.5.31
-	golang.org/x/tools v0.40.0
 )
 
 require (
