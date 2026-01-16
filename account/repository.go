@@ -9,8 +9,8 @@ import (
 
 type Repository interface {
 	Close()
-	CreateAccount(ctx context.Context, account *Account) error
-	GetAccountbyID(ctx context.Context, id string) (*Account, error)
+	CreateOrUpdateAccount(ctx context.Context, account *Account) error
+	GetAccountByID(ctx context.Context, id string) (*Account, error)
 	ListAccounts(ctx context.Context, skip uint, take uint) ([]*Account, error)
 }
 
@@ -30,30 +30,30 @@ func NewPostgresRepository(url string) (Repository, error) {
 	return &PostgresRepository{db}, nil
 }
 
-func (r *PostgresRepository) Close() {
-	r.db.Close()
+func (repository *PostgresRepository) Close() {
+	repository.db.Close()
 }
 
-func (r *PostgresRepository) Ping() error {
-	return r.db.Ping()
+func (repository *PostgresRepository) Ping() error {
+	return repository.db.Ping()
 }
 
-func (r *PostgresRepository) CreateAccount(ctx context.Context, account *Account) error {
-	_, err := r.db.ExecContext(ctx, "INSERT INTO accounts (id, name, email, password) VALUES ($1, $2, $3, $4)", account.ID, account.Name, account.Email, account.Password)
+func (repository *PostgresRepository) CreateOrUpdateAccount(ctx context.Context, account *Account) error {
+	_, err := repository.db.ExecContext(ctx, "INSERT INTO accounts (id, name, email, password) VALUES ($1, $2, $3, $4) ON CONFLICT (id) DO UPDATE SET name = $2, email = $3, password = $4", account.ID, account.Name, account.Email, account.Password)
 	return err
 }
 
-func (r *PostgresRepository) GetAccountbyID(ctx context.Context, id string) (*Account, error) {
-	r.db.QueryRowContext(ctx, "SELECT id, name, email, password FROM accounts WHERE id = $1", id)
+func (repository *PostgresRepository) GetAccountByID(ctx context.Context, id string) (*Account, error) {
+	row := repository.db.QueryRowContext(ctx, "SELECT id, name, email FROM accounts WHERE id = $1", id)
 	account := &Account{}
-	if err := row.Scan(&account.ID, &account.Name, &account.Email, &account.Password); err != nil {
+	if err := row.Scan(&account.ID, &account.Name, &account.Email); err != nil {
 		return nil, err
 	}
-	return &account, nil
+	return account, nil
 }
 
-func (r *PostgresRepository) ListAccounts(ctx context.Context, skip uint, take uint) ([]*Account, error) {
-	rows, err := r.db.QueryContext(ctx, "SELECT id, name, email, password FROM accounts ORDER by id DESC  LIMIT $1 OFFSET $2", take, skip)
+func (repository *PostgresRepository) ListAccounts(ctx context.Context, skip uint, take uint) ([]*Account, error) {
+	rows, err := repository.db.QueryContext(ctx, "SELECT id, name, email FROM accounts ORDER by id DESC  LIMIT $1 OFFSET $2", take, skip)
 	if err != nil {
 		return nil, err
 	}
@@ -61,10 +61,10 @@ func (r *PostgresRepository) ListAccounts(ctx context.Context, skip uint, take u
 	accounts := []*Account{}
 	for rows.Next() {
 		account := &Account{}
-		if err := rows.Scan(&account.ID, &account.Name, &account.Email, &account.Password); err != nil {
+		if err := rows.Scan(&account.ID, &account.Name, &account.Email); err != nil {
 			return nil, err
 		}
-		accounts = append(accounts, *account)
+		accounts = append(accounts, account)
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
