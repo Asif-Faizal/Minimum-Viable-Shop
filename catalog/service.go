@@ -6,12 +6,12 @@ import (
 	"github.com/segmentio/ksuid"
 )
 
-type Service struct {
-	CreateOrUpdateProduct func(ctx context.Context, product *Product) (*Product, error)
-	GetProductById        func(ctx context.Context, id string) (*Product, error)
-	ListProducts          func(ctx context.Context, skip uint64, take uint64) ([]*Product, error)
-	ListProductsWithIds   func(ctx context.Context, ids []string) ([]*Product, error)
-	SearchProducts        func(ctx context.Context, query string, skip uint64, take uint64) ([]*Product, error)
+type Service interface {
+	CreateOrUpdateProduct(ctx context.Context, product *Product) (*Product, error)
+	GetProductById(ctx context.Context, id string) (*Product, error)
+	ListProducts(ctx context.Context, skip uint64, take uint64) ([]*Product, error)
+	ListProductsWithIds(ctx context.Context, ids []string) ([]*Product, error)
+	SearchProducts(ctx context.Context, query string, skip uint64, take uint64) ([]*Product, error)
 }
 
 type CatalogService struct {

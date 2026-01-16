@@ -3,7 +3,7 @@ package account
 import (
 	"context"
 
-	"github.com/Asif-Faizal/Minimum-Viable-Shop/account/pb"
+	pb "github.com/Asif-Faizal/Minimum-Viable-Shop/account/pb"
 	"google.golang.org/grpc"
 )
 
