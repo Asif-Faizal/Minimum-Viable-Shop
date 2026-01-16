@@ -40,14 +40,14 @@ func (service *AccountService) CreateOrUpdateAccount(ctx context.Context, accoun
 		Email:    account.Email,
 		Password: hashed,
 	}
-	if err := service.repository.CreateOrUpdateAccount(ctx, newAccount); err != nil {
+	if _, err := service.repository.CreateOrUpdateAccount(ctx, newAccount); err != nil {
 		return nil, err
 	}
 	return account, nil
 }
 
 func (service *AccountService) GetAccountByID(ctx context.Context, id string) (*Account, error) {
-	account, err := service.repository.GetAccountByID(ctx, id)
+	account, err := service.repository.GetAccountById(ctx, id)
 	if err != nil {
 		return nil, err
 	}

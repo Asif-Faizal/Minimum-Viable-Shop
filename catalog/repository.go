@@ -11,9 +11,9 @@ type Repository interface {
 	Close()
 	CreateOrUpdateProduct(ctx context.Context, product *Product) (*Product, error)
 	GetProductById(ctx context.Context, id string) (*Product, error)
-	ListProducts(ctx context.Context, skip uint, take uint) ([]*Product, error)
+	ListProducts(ctx context.Context, skip uint64, take uint64) ([]*Product, error)
 	ListProductsWithIds(ctx context.Context, ids []string) ([]*Product, error)
-	SearchProducts(ctx context.Context, query string, skip uint, take uint) ([]*Product, error)
+	SearchProducts(ctx context.Context, query string, skip uint64, take uint64) ([]*Product, error)
 }
 
 type ElasticRepository struct {
@@ -57,7 +57,7 @@ func (repository *ElasticRepository) GetProductById(ctx context.Context, id stri
 		return nil, err
 	}
 	product := ProductDocument{}
-	if err := json.Unmarshal(*&res.Source, &product); err != nil {
+	if err := json.Unmarshal(res.Source, &product); err != nil {
 		return nil, err
 	}
 	return &Product{
@@ -68,7 +68,7 @@ func (repository *ElasticRepository) GetProductById(ctx context.Context, id stri
 	}, nil
 }
 
-func (repository *ElasticRepository) ListProducts(ctx context.Context, skip uint, take uint) ([]*Product, error) {
+func (repository *ElasticRepository) ListProducts(ctx context.Context, skip uint64, take uint64) ([]*Product, error) {
 	res, err := repository.client.Search().
 		Index("catalog").
 		Query(elastic.NewMatchAllQuery()).
@@ -81,7 +81,7 @@ func (repository *ElasticRepository) ListProducts(ctx context.Context, skip uint
 	products := []*Product{}
 	for _, hit := range res.Hits.Hits {
 		product := ProductDocument{}
-		if err := json.Unmarshal(*&hit.Source, &product); err != nil {
+		if err := json.Unmarshal(hit.Source, &product); err != nil {
 			return nil, err
 		}
 		products = append(products, &Product{
@@ -126,8 +126,8 @@ func (repository *ElasticRepository) ListProductsWithIds(ctx context.Context, id
 	return products, nil
 }
 
-func (r *ElasticRepository) SearchProducts(ctx context.Context, query string, skip uint, take uint) ([]*Product, error) {
-	res, err := r.client.Search().
+func (repository *ElasticRepository) SearchProducts(ctx context.Context, query string, skip uint64, take uint64) ([]*Product, error) {
+	res, err := repository.client.Search().
 		Index("catalog").
 		Query(elastic.NewMultiMatchQuery(query, "name", "description")).
 		From(int(skip)).Size(int(take)).
