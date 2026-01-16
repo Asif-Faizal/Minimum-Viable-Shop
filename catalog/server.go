@@ -77,3 +77,37 @@ func (server *GrpcServer) ListProducts(ctx context.Context, request *pb.ListProd
 	}
 	return &pb.ListProductsResponse{Products: products}, nil
 }
+
+func (server *GrpcServer) ListProductsWithIds(ctx context.Context, request *pb.ListProductsWithIdsRequest) (*pb.ListProductsWithIdsResponse, error) {
+	products, err := server.catalogService.ListProductsWithIds(ctx, request.Ids)
+	if err != nil {
+		return nil, err
+	}
+	grpcProducts := []*pb.Product{}
+	for _, product := range products {
+		grpcProducts = append(grpcProducts, &pb.Product{
+			Id:          product.ID,
+			Name:        product.Name,
+			Description: product.Description,
+			Price:       product.Price,
+		})
+	}
+	return &pb.ListProductsWithIdsResponse{Products: grpcProducts}, nil
+}
+
+func (server *GrpcServer) SearchProducts(ctx context.Context, request *pb.SearchProductsRequest) (*pb.SearchProductsResponse, error) {
+	products, err := server.catalogService.SearchProducts(ctx, request.Query, request.Skip, request.Take)
+	if err != nil {
+		return nil, err
+	}
+	grpcProducts := []*pb.Product{}
+	for _, product := range products {
+		grpcProducts = append(grpcProducts, &pb.Product{
+			Id:          product.ID,
+			Name:        product.Name,
+			Description: product.Description,
+			Price:       product.Price,
+		})
+	}
+	return &pb.SearchProductsResponse{Products: grpcProducts}, nil
+}
