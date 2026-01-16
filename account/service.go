@@ -2,6 +2,9 @@ package account
 
 import (
 	"context"
+
+	"github.com/segmentio/ksuid"
+	"golang.org/x/crypto/bcrypt"
 )
 
 type Service interface {
@@ -19,7 +22,25 @@ func NewAccountService(repository Repository) *AccountService {
 }
 
 func (service *AccountService) CreateOrUpdateAccount(ctx context.Context, account *Account) (*Account, error) {
-	if err := service.repository.CreateOrUpdateAccount(ctx, account); err != nil {
+	id := account.ID
+	if id == "" {
+		id = ksuid.New().String()
+	}
+	hashed := ""
+	if account.Password != "" {
+		b, err := bcrypt.GenerateFromPassword([]byte(account.Password), bcrypt.DefaultCost)
+		if err != nil {
+			return nil, err
+		}
+		hashed = string(b)
+	}
+	newAccount := &Account{
+		ID:       id,
+		Name:     account.Name,
+		Email:    account.Email,
+		Password: hashed,
+	}
+	if err := service.repository.CreateOrUpdateAccount(ctx, newAccount); err != nil {
 		return nil, err
 	}
 	return account, nil
@@ -34,6 +55,9 @@ func (service *AccountService) GetAccountByID(ctx context.Context, id string) (*
 }
 
 func (service *AccountService) ListAccounts(ctx context.Context, skip uint, take uint) ([]*Account, error) {
+	if take > 100 || (skip == 0 && take == 0) {
+		take = 100
+	}
 	accounts, err := service.repository.ListAccounts(ctx, skip, take)
 	if err != nil {
 		return nil, err

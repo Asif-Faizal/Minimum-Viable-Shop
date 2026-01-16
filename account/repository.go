@@ -39,7 +39,7 @@ func (repository *PostgresRepository) Ping() error {
 }
 
 func (repository *PostgresRepository) CreateOrUpdateAccount(ctx context.Context, account *Account) error {
-	_, err := repository.db.ExecContext(ctx, "INSERT INTO accounts (id, name, email, password) VALUES ($1, $2, $3, $4) ON CONFLICT (id) DO UPDATE SET name = $2, email = $3, password = $4", account.ID, account.Name, account.Email, account.Password)
+	_, err := repository.db.ExecContext(ctx, "INSERT INTO accounts (id, name, email, password) VALUES ($1, $2, $3, $4) ON CONFLICT (id) DO UPDATE SET name = $2, email = $3, password = COALESCE(NULLIF($4, ''), accounts.password)", account.ID, account.Name, account.Email, account.Password)
 	return err
 }
 

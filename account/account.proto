@@ -1,0 +1,45 @@
+syntax = "proto3";
+
+package pb;
+
+option go_package = "github.com/Asif-Faizal/Minimum-Viable-Shop/account/pb;pb";
+
+message Account {
+  string id = 1;
+  string name = 2;
+  string email = 3;
+}
+
+message CreateOrUpdateAccountRequest {
+  string id = 1;
+  string name = 2;
+  string email = 3;
+  string password = 4;
+}
+
+message CreateOrUpdateAccountResponse {
+  Account account = 1;
+}
+
+message GetAccountByIDRequest {
+  string id = 1;
+}
+
+message GetAccountByIDResponse {
+  Account account = 1;
+}
+
+message ListAccountsRequest {
+  uint32 skip = 1;
+  uint32 take = 2;
+}
+ 
+message ListAccountsResponse {
+  repeated Account accounts = 1;
+}
+
+service AccountService {
+  rpc CreateOrUpdateAccount(CreateOrUpdateAccountRequest) returns (CreateOrUpdateAccountResponse);
+  rpc GetAccountByID(GetAccountByIDRequest) returns (GetAccountByIDResponse);
+  rpc ListAccounts(ListAccountsRequest) returns (ListAccountsResponse);
+}
