@@ -39,3 +39,26 @@ func (client *AccountClient) CreateOrUpdateAccount(ctx context.Context, name, em
 	}
 	return response, nil
 }
+
+// Get Account by ID
+func (client *AccountClient) GetAccountByID(ctx context.Context, id string) (*pb.GetAccountByIDResponse, error) {
+	response, err := client.client.GetAccountByID(ctx, &pb.GetAccountByIDRequest{
+		Id: id,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return response, nil
+}
+
+// List Accounts
+func (client *AccountClient) ListAccounts(ctx context.Context, skip uint32, take uint32) (*pb.ListAccountsResponse, error) {
+	response, err := client.client.ListAccounts(ctx, &pb.ListAccountsRequest{
+		Skip: skip,
+		Take: take,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return response, nil
+}
