@@ -3,20 +3,20 @@ syntax = "proto3";
 
 package pb;
 
-option go_package = "./pb";
+option go_package = "./";
 
 message Product {
   string id = 1;
   string name = 2;
   string description = 3;
-  int32 price = 4;
+  float price = 4;
 }
 
 message CreateOrUpdateProductRequest {
   string id = 1;
   string name = 2;
   string description = 3;
-  int32 price = 4;
+  float price = 4;
 }
 
 message CreateOrUpdateProductResponse {

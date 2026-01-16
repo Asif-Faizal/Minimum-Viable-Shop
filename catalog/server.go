@@ -1,6 +1,7 @@
 package catalog
 
 import (
+	"context"
 	"fmt"
 	"net"
 
@@ -24,4 +25,55 @@ func ListenGrpcServer(service Service, port int) error {
 	pb.RegisterCatalogServiceServer(grpcServer, server)
 	reflection.Register(grpcServer)
 	return grpcServer.Serve(lis)
+}
+
+func (server *GrpcServer) CreateOrUpdateProduct(ctx context.Context, request *pb.CreateOrUpdateProductRequest) (*pb.CreateOrUpdateProductResponse, error) {
+	product, err := server.catalogService.CreateOrUpdateProduct(ctx, &Product{
+		Name:        request.Name,
+		Description: request.Description,
+		Price:       request.Price,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return &pb.CreateOrUpdateProductResponse{
+		Product: &pb.Product{
+			Id:          product.ID,
+			Name:        product.Name,
+			Description: product.Description,
+			Price:       product.Price,
+		},
+	}, nil
+}
+
+func (server *GrpcServer) GetProductByID(ctx context.Context, request *pb.GetProductByIDRequest) (*pb.GetProductByIDResponse, error) {
+	product, err := server.catalogService.GetProductById(ctx, request.Id)
+	if err != nil {
+		return nil, err
+	}
+	return &pb.GetProductByIDResponse{
+		Product: &pb.Product{
+			Id:          product.ID,
+			Name:        product.Name,
+			Description: product.Description,
+			Price:       product.Price,
+		},
+	}, nil
+}
+
+func (server *GrpcServer) ListProducts(ctx context.Context, request *pb.ListProductsRequest) (*pb.ListProductsResponse, error) {
+	domainProducts, err := server.catalogService.ListProducts(ctx, request.Skip, request.Take)
+	if err != nil {
+		return nil, err
+	}
+	products := []*pb.Product{}
+	for _, product := range domainProducts {
+		products = append(products, &pb.Product{
+			Id:          product.ID,
+			Name:        product.Name,
+			Description: product.Description,
+			Price:       product.Price,
+		})
+	}
+	return &pb.ListProductsResponse{Products: products}, nil
 }
