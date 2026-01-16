@@ -30,7 +30,6 @@ func ListenGrpcServer(service Service, port int) error {
 
 func (server *GrpcServer) CreateOrUpdateAccount(ctx context.Context, request *pb.CreateOrUpdateAccountRequest) (*pb.CreateOrUpdateAccountResponse, error) {
 	account, err := server.accountService.CreateOrUpdateAccount(ctx, &Account{
-		ID:       request.Id,
 		Name:     request.Name,
 		Email:    request.Email,
 		Password: request.Password,
