@@ -1,6 +1,6 @@
 CREATE TABLE IF NOT EXISTS accounts (
-    id UUID PRIMARY KEY,
-    name VARCHAR(50) NOT NULL,
+    id CHAR(27) PRIMARY KEY,
+    name VARCHAR(24) NOT NULL,
     email VARCHAR(255) UNIQUE NOT NULL,
     password VARCHAR(255) NOT NULL
 );
