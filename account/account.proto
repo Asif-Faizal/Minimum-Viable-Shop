@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package pb;
 
-option go_package = "github.com/Asif-Faizal/Minimum-Viable-Shop/account/pb;pb";
+option go_package = "./";
 
 message Account {
   string id = 1;

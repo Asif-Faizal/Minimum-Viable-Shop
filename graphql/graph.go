@@ -1,15 +1,18 @@
 package graphql
 
-import "github.com/99designs/gqlgen/graphql"
+import (
+	"github.com/99designs/gqlgen/graphql"
+	"github.com/Asif-Faizal/Minimum-Viable-Shop/account"
+)
 
 type Server struct {
-	accountClient *account.Client
+	accountClient *account.AccountClient
 	catalogClient *catalog.Client
 	orderClient   *order.Client
 }
 
 func NewGraphQLServer(accountUrl, catalogUrl, orderUrl string) (*Server, error) {
-	accountClient, err := account.NewClient(accountUrl)
+	accountClient, err := account.NewAccountClient(accountUrl)
 	if err != nil {
 		accountClient.Close()
 		return nil, err
