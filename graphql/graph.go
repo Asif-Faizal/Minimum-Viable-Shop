@@ -3,11 +3,13 @@ package graphql
 import (
 	"github.com/99designs/gqlgen/graphql"
 	"github.com/Asif-Faizal/Minimum-Viable-Shop/account"
+	"github.com/Asif-Faizal/Minimum-Viable-Shop/catalog"
+	"github.com/Asif-Faizal/Minimum-Viable-Shop/order"
 )
 
 type Server struct {
 	accountClient *account.AccountClient
-	catalogClient *catalog.Client
+	catalogClient catalog.Repository
 	orderClient   *order.Client
 }
 
@@ -17,7 +19,7 @@ func NewGraphQLServer(accountUrl, catalogUrl, orderUrl string) (*Server, error) 
 		accountClient.Close()
 		return nil, err
 	}
-	catalogClient, err := catalog.NewClient(catalogUrl)
+	catalogClient, err := catalog.NewElasticRepository(catalogUrl)
 	if err != nil {
 		accountClient.Close()
 		catalogClient.Close()
