@@ -8,7 +8,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 
-	"github.com/Asif-Faizal/Minimum-Viable-Shop/account/pb"
+	pb "github.com/Asif-Faizal/Minimum-Viable-Shop/account/pb"
 )
 
 type GrpcServer struct {
