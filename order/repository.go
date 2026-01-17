@@ -3,8 +3,7 @@ package order
 import (
 	"context"
 	"database/sql"
-
-	"github.com/lib/pq"
+	"time"
 )
 
 type Repository interface {
@@ -69,59 +68,80 @@ func (repository *PostgresRepository) GetOrderById(ctx context.Context, id strin
 }
 
 func (repository *PostgresRepository) GetOrdersForAccount(ctx context.Context, accountId string) ([]*Order, error) {
-	rows, err := repository.db.QueryContext(ctx, "SELECT id, createdAt, accountId, totalPrice FROM orders WHERE accountId = $1", accountId)
+	var err error
+	rows, err := repository.db.QueryContext(
+		ctx,
+		`SELECT
+			o.id,
+			o.createdAt,
+			o.accountId,
+			o.totalPrice,
+			op.productId,
+			op.quantity,
+			p.name,
+			p.price
+		FROM orders o
+		JOIN order_products op ON (o.id = op.orderId)
+		JOIN products p ON (op.productId = p.id)
+		WHERE o.accountId = $1
+		ORDER BY o.createdAt DESC`,
+		accountId,
+	)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 
-	orders := []*Order{}
-	orderIDs := []string{}
+	ordersMap := make(map[string]*Order)
+	var orders []*Order
 
 	for rows.Next() {
-		order := &Order{
-			Products: []*OrderProduct{},
-		}
-		if err = rows.Scan(&order.ID, &order.CreatedAt, &order.AccountID, &order.TotalPrice); err != nil {
+		var orderID string
+		var createdAt time.Time
+		var accountID string
+		var totalPrice float64
+		var productID string
+		var quantity int
+		var productName string
+		var productPrice float64
+
+		if err = rows.Scan(
+			&orderID,
+			&createdAt,
+			&accountID,
+			&totalPrice,
+			&productID,
+			&quantity,
+			&productName,
+			&productPrice,
+		); err != nil {
 			return nil, err
 		}
-		orders = append(orders, order)
-		orderIDs = append(orderIDs, order.ID)
+
+		order, ok := ordersMap[orderID]
+		if !ok {
+			order = &Order{
+				ID:         orderID,
+				CreatedAt:  createdAt,
+				AccountID:  accountID,
+				TotalPrice: totalPrice,
+				Products:   []*OrderProduct{},
+			}
+			ordersMap[orderID] = order
+			orders = append(orders, order)
+		}
+
+		order.Products = append(order.Products, &OrderProduct{
+			OrderID:     orderID,
+			ProductID:   productID,
+			ProductName: productName,
+			Price:       productPrice,
+			Quantity:    quantity,
+		})
 	}
+
 	if err = rows.Err(); err != nil {
 		return nil, err
-	}
-
-	if len(orderIDs) == 0 {
-		return orders, nil
-	}
-
-	if ctx.Err() != nil {
-		return nil, ctx.Err()
-	}
-
-	productRows, err := repository.db.QueryContext(ctx, "SELECT orderId, productId, quantity FROM order_products WHERE orderId = ANY($1)", pq.Array(orderIDs))
-	if err != nil {
-		return nil, err
-	}
-	defer productRows.Close()
-
-	productsByOrder := make(map[string][]*OrderProduct, len(orderIDs))
-	for productRows.Next() {
-		product := &OrderProduct{}
-		if err = productRows.Scan(&product.OrderID, &product.ProductID, &product.Quantity); err != nil {
-			return nil, err
-		}
-		productsByOrder[product.OrderID] = append(productsByOrder[product.OrderID], product)
-	}
-	if err := productRows.Err(); err != nil {
-		return nil, err
-	}
-
-	for _, order := range orders {
-		if products, ok := productsByOrder[order.ID]; ok {
-			order.Products = products
-		}
 	}
 
 	return orders, nil
