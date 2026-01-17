@@ -43,7 +43,7 @@ func (service *AccountService) CreateOrUpdateAccount(ctx context.Context, accoun
 	if _, err := service.repository.CreateOrUpdateAccount(ctx, newAccount); err != nil {
 		return nil, err
 	}
-	return account, nil
+	return newAccount, nil
 }
 
 func (service *AccountService) GetAccountByID(ctx context.Context, id string) (*Account, error) {

@@ -23,8 +23,12 @@ func NewCatalogService(repository Repository) *CatalogService {
 }
 
 func (service *CatalogService) CreateOrUpdateProduct(ctx context.Context, product *Product) (*Product, error) {
+	id := product.ID
+	if id == "" {
+		id = ksuid.New().String()
+	}
 	newProduct := &Product{
-		ID:          ksuid.New().String(),
+		ID:          id,
 		Name:        product.Name,
 		Description: product.Description,
 		Price:       product.Price,
