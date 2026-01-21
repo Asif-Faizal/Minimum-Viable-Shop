@@ -68,7 +68,6 @@ func (repository *PostgresRepository) GetOrderById(ctx context.Context, id strin
 }
 
 func (repository *PostgresRepository) GetOrdersForAccount(ctx context.Context, accountId string) ([]*Order, error) {
-	var err error
 	rows, err := repository.db.QueryContext(
 		ctx,
 		`SELECT
@@ -79,6 +78,7 @@ func (repository *PostgresRepository) GetOrdersForAccount(ctx context.Context, a
 			op.productId,
 			op.quantity,
 			p.name,
+			p.description,
 			p.price
 		FROM orders o
 		JOIN order_products op ON (o.id = op.orderId)
@@ -103,6 +103,7 @@ func (repository *PostgresRepository) GetOrdersForAccount(ctx context.Context, a
 		var productID string
 		var quantity int
 		var productName string
+		var productDescription string
 		var productPrice float64
 
 		if err = rows.Scan(
@@ -113,6 +114,7 @@ func (repository *PostgresRepository) GetOrdersForAccount(ctx context.Context, a
 			&productID,
 			&quantity,
 			&productName,
+			&productDescription,
 			&productPrice,
 		); err != nil {
 			return nil, err
@@ -132,11 +134,12 @@ func (repository *PostgresRepository) GetOrdersForAccount(ctx context.Context, a
 		}
 
 		order.Products = append(order.Products, &OrderProduct{
-			OrderID:     orderID,
-			ProductID:   productID,
-			ProductName: productName,
-			Price:       productPrice,
-			Quantity:    quantity,
+			OrderID:            orderID,
+			ProductID:          productID,
+			ProductName:        productName,
+			ProductDescription: productDescription,
+			Price:              productPrice,
+			Quantity:           quantity,
 		})
 	}
 

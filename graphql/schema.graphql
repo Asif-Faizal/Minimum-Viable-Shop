@@ -24,6 +24,7 @@ type OrderedProduct {
 type Order {
   id: String!
   createdAt: Time!
+  accountId: String!
   totalPrice: Float!
   products: [OrderedProduct!]!
 }

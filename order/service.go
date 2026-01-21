@@ -32,8 +32,28 @@ func (service *OrderService) CreateOrUpdateOrder(ctx context.Context, order *Ord
 		TotalPrice: order.TotalPrice,
 		Products:   order.Products,
 	}
+	newOrder.TotalPrice = 0
+	for _, product := range newOrder.Products {
+		newOrder.TotalPrice += product.Price * float64(product.Quantity)
+	}
 	if _, err := service.repository.CreateOrUpdateOrder(ctx, newOrder); err != nil {
 		return nil, err
 	}
 	return newOrder, nil
+}
+
+func (service *OrderService) GetOrderById(ctx context.Context, id string) (*Order, error) {
+	order, err := service.repository.GetOrderById(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	return order, nil
+}
+
+func (service *OrderService) GetOrdersForAccount(ctx context.Context, accountID string) ([]*Order, error) {
+	orders, err := service.repository.GetOrdersForAccount(ctx, accountID)
+	if err != nil {
+		return nil, err
+	}
+	return orders, nil
 }
