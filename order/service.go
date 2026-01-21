@@ -2,6 +2,7 @@ package order
 
 import (
 	"context"
+	"time"
 
 	"github.com/segmentio/ksuid"
 )
@@ -22,17 +23,19 @@ func NewOrderService(repository Repository) *OrderService {
 
 func (service *OrderService) CreateOrUpdateOrder(ctx context.Context, order *Order) (*Order, error) {
 	id := order.ID
+	createdAt := order.CreatedAt
 	if id == "" {
 		id = ksuid.New().String()
+		createdAt = time.Now().UTC()
 	}
 	newOrder := &Order{
 		ID:         id,
-		CreatedAt:  order.CreatedAt,
+		CreatedAt:  createdAt,
 		AccountID:  order.AccountID,
 		TotalPrice: order.TotalPrice,
 		Products:   order.Products,
 	}
-	newOrder.TotalPrice = 0
+	newOrder.TotalPrice = 0.0
 	for _, product := range newOrder.Products {
 		newOrder.TotalPrice += product.Price * float64(product.Quantity)
 	}

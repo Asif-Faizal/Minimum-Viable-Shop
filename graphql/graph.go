@@ -9,8 +9,8 @@ import (
 
 type Server struct {
 	accountClient *account.AccountClient
-	catalogClient catalog.Repository
-	orderClient   *order.Client
+	catalogClient *catalog.CatalogClient
+	orderClient   *order.OrderClient
 }
 
 func NewGraphQLServer(accountUrl, catalogUrl, orderUrl string) (*Server, error) {
