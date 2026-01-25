@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net"
 
+	"github.com/grpc-ecosystem/go-grpc-middleware"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 
@@ -13,23 +14,36 @@ import (
 
 type GrpcServer struct {
 	accountService Service
+	logger         Logger
 	pb.UnimplementedAccountServiceServer
 }
 
-func ListenGrpcServer(service Service, port int) error {
+func ListenGrpcServer(service Service, logger Logger, port int) error {
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
 	if err != nil {
 		return err
 	}
-	grpcServer := grpc.NewServer()
-	server := &GrpcServer{accountService: service}
+
+	grpcServer := grpc.NewServer(
+		grpc.UnaryInterceptor(grpc_middleware.ChainUnaryServer(
+			UnaryServerInterceptor(logger),
+		)),
+	)
+
+	server := &GrpcServer{
+		accountService: service,
+		logger:         logger,
+	}
 	pb.RegisterAccountServiceServer(grpcServer, server)
 	reflection.Register(grpcServer)
+
+	logger.Transport().Info().Int("port", port).Msg("gRPC server listening")
 	return grpcServer.Serve(lis)
 }
 
 func (server *GrpcServer) CreateOrUpdateAccount(ctx context.Context, request *pb.CreateOrUpdateAccountRequest) (*pb.CreateOrUpdateAccountResponse, error) {
 	account, err := server.accountService.CreateOrUpdateAccount(ctx, &Account{
+		ID:       request.Id,
 		Name:     request.Name,
 		Email:    request.Email,
 		Password: request.Password,

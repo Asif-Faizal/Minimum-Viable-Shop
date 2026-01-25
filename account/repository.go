@@ -3,6 +3,7 @@ package account
 import (
 	"context"
 	"database/sql"
+	"time"
 
 	_ "github.com/lib/pq"
 )
@@ -15,10 +16,11 @@ type Repository interface {
 }
 
 type PostgresRepository struct {
-	db *sql.DB
+	db     *sql.DB
+	logger Logger
 }
 
-func NewPostgresRepository(url string) (Repository, error) {
+func NewPostgresRepository(url string, logger Logger) (Repository, error) {
 	db, err := sql.Open("postgres", url)
 	if err != nil {
 		return nil, err
@@ -27,19 +29,28 @@ func NewPostgresRepository(url string) (Repository, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &PostgresRepository{db}, nil
+	return &PostgresRepository{
+		db:     db,
+		logger: logger,
+	}, nil
 }
 
 func (repository *PostgresRepository) Close() {
 	repository.db.Close()
 }
 
-func (repository *PostgresRepository) Ping() error {
-	return repository.db.Ping()
-}
-
 func (repository *PostgresRepository) CreateOrUpdateAccount(ctx context.Context, account *Account) (*Account, error) {
-	_, err := repository.db.ExecContext(ctx, "INSERT INTO accounts (id, name, email, password) VALUES ($1, NULLIF($2, ''), $3, $4) ON CONFLICT (id) DO UPDATE SET name = NULLIF($2, ''), email = $3, password = $4", account.ID, account.Name, account.Email, account.Password)
+	start := time.Now()
+	query := "INSERT INTO accounts (id, name, email, password) VALUES ($1, NULLIF($2, ''), $3, $4) ON CONFLICT (id) DO UPDATE SET name = NULLIF($2, ''), email = $3, password = $4"
+
+	_, err := repository.db.ExecContext(ctx, query, account.ID, account.Name, account.Email, account.Password)
+
+	repository.logger.Database().Debug().
+		Str("query", query).
+		Str("duration", time.Since(start).String()).
+		Bool("success", err == nil).
+		Msg("Execute Query")
+
 	if err != nil {
 		return nil, err
 	}
@@ -47,10 +58,21 @@ func (repository *PostgresRepository) CreateOrUpdateAccount(ctx context.Context,
 }
 
 func (repository *PostgresRepository) GetAccountById(ctx context.Context, id string) (*Account, error) {
-	row := repository.db.QueryRowContext(ctx, "SELECT id, name, email FROM accounts WHERE id = $1", id)
+	start := time.Now()
+	query := "SELECT id, name, email FROM accounts WHERE id = $1"
+
+	row := repository.db.QueryRowContext(ctx, query, id)
 	account := &Account{}
 	var name sql.NullString
-	if err := row.Scan(&account.ID, &name, &account.Email); err != nil {
+	err := row.Scan(&account.ID, &name, &account.Email)
+
+	repository.logger.Database().Debug().
+		Str("query", query).
+		Str("duration", time.Since(start).String()).
+		Bool("success", err == nil).
+		Msg("Query Row")
+
+	if err != nil {
 		return nil, err
 	}
 	account.Name = name.String
@@ -58,11 +80,22 @@ func (repository *PostgresRepository) GetAccountById(ctx context.Context, id str
 }
 
 func (repository *PostgresRepository) ListAccounts(ctx context.Context, skip uint, take uint) ([]*Account, error) {
-	rows, err := repository.db.QueryContext(ctx, "SELECT id, name, email FROM accounts ORDER by id DESC  LIMIT $1 OFFSET $2", take, skip)
+	start := time.Now()
+	query := "SELECT id, name, email FROM accounts ORDER by id DESC LIMIT $1 OFFSET $2"
+
+	rows, err := repository.db.QueryContext(ctx, query, take, skip)
+
+	repository.logger.Database().Debug().
+		Str("query", query).
+		Str("duration", time.Since(start).String()).
+		Bool("success", err == nil).
+		Msg("Query Context")
+
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
+
 	accounts := []*Account{}
 	for rows.Next() {
 		account := &Account{}
