@@ -35,10 +35,12 @@ input PaginationInput {
 }
 
 input AccountInput {
+  id: String
   name: String!
 }
 
 input ProductInput {
+  id: String
   name: String!
   description: String!
   price: Float!
@@ -50,6 +52,7 @@ input OrderProductInput {
 }
 
 input OrderInput {
+  id: String
   accountId: String!
   products: [OrderProductInput!]!
 }

@@ -12,17 +12,23 @@ type mutationResolver struct {
 	server *Server
 }
 
-// CreateAccount creates a new account
+// CreateAccount creates or updates an account
 func (r *mutationResolver) CreateAccount(ctx context.Context, input AccountInput) (*Account, error) {
 	// Validate input
 	if input.Name == "" {
 		return nil, fmt.Errorf("account name is required")
 	}
 
+	// Determine ID: use provided ID or empty string for new account
+	id := ""
+	if input.ID != nil {
+		id = *input.ID
+	}
+
 	// Call account service
-	resp, err := r.server.accountClient.CreateOrUpdateAccount(ctx, "", input.Name, "", "")
+	resp, err := r.server.accountClient.CreateOrUpdateAccount(ctx, id, input.Name, "", "")
 	if err != nil {
-		return nil, fmt.Errorf("failed to create account: %w", err)
+		return nil, fmt.Errorf("failed to create/update account: %w", err)
 	}
 
 	if resp == nil || resp.Account == nil {
@@ -35,7 +41,7 @@ func (r *mutationResolver) CreateAccount(ctx context.Context, input AccountInput
 	}, nil
 }
 
-// CreateProduct creates a new product in the catalog
+// CreateProduct creates or updates a product in the catalog
 func (r *mutationResolver) CreateProduct(ctx context.Context, input ProductInput) (*Product, error) {
 	// Validate input
 	if input.Name == "" {
@@ -45,10 +51,16 @@ func (r *mutationResolver) CreateProduct(ctx context.Context, input ProductInput
 		return nil, fmt.Errorf("product price must be positive")
 	}
 
+	// Determine ID: use provided ID or empty string for new product
+	id := ""
+	if input.ID != nil {
+		id = *input.ID
+	}
+
 	// Call catalog service (convert float64 to float32)
-	response, err := r.server.catalogClient.CreateOrUpdateProduct(ctx, "", input.Name, input.Description, float32(input.Price))
+	response, err := r.server.catalogClient.CreateOrUpdateProduct(ctx, id, input.Name, input.Description, float32(input.Price))
 	if err != nil {
-		return nil, fmt.Errorf("failed to create product: %w", err)
+		return nil, fmt.Errorf("failed to create/update product: %w", err)
 	}
 
 	if response == nil || response.Product == nil {
@@ -63,7 +75,7 @@ func (r *mutationResolver) CreateProduct(ctx context.Context, input ProductInput
 	}, nil
 }
 
-// CreateOrder creates a new order
+// CreateOrder creates or updates an order
 func (r *mutationResolver) CreateOrder(ctx context.Context, input OrderInput) (*Order, error) {
 	// Validate input
 	if input.AccountID == "" {
@@ -88,15 +100,21 @@ func (r *mutationResolver) CreateOrder(ctx context.Context, input OrderInput) (*
 		})
 	}
 
+	// Determine ID: use provided ID or empty string for new order
+	id := ""
+	if input.ID != nil {
+		id = *input.ID
+	}
+
 	// Call order service
 	response, err := r.server.orderClient.CreateOrUpdateOrder(ctx, &orderpb.Order{
-		Id:        "", // Empty ID for new order
+		Id:        id,
 		AccountId: input.AccountID,
 		Products:  protoProducts,
 		CreatedAt: timestamppb.Now(),
 	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to create order: %w", err)
+		return nil, fmt.Errorf("failed to create/update order: %w", err)
 	}
 
 	if response == nil || response.Order == nil {

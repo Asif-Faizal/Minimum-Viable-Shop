@@ -7,7 +7,8 @@ import (
 )
 
 type AccountInput struct {
-	Name string `json:"name"`
+	ID   *string `json:"id,omitempty"`
+	Name string  `json:"name"`
 }
 
 type Mutation struct {
@@ -22,6 +23,7 @@ type Order struct {
 }
 
 type OrderInput struct {
+	ID        *string              `json:"id,omitempty"`
 	AccountID string               `json:"accountId"`
 	Products  []*OrderProductInput `json:"products"`
 }
@@ -52,6 +54,7 @@ type Product struct {
 }
 
 type ProductInput struct {
+	ID          *string `json:"id,omitempty"`
 	Name        string  `json:"name"`
 	Description string  `json:"description"`
 	Price       float64 `json:"price"`
