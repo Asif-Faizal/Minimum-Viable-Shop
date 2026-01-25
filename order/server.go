@@ -44,13 +44,24 @@ func ListenGrpcServer(service Service, accountUrl string, catalogUrl string, por
 }
 
 func (server *GrpcServer) CreateOrUpdateOrder(ctx context.Context, request *pb.CreateOrUpdateOrderRequest) (*pb.CreateOrUpdateOrderResponse, error) {
+	// Validate request
+	if request == nil || request.Order == nil {
+		return nil, fmt.Errorf("invalid request: order cannot be nil")
+	}
+	if request.Order.AccountId == "" {
+		return nil, fmt.Errorf("invalid request: account_id is required")
+	}
+	if len(request.Order.Products) == 0 {
+		return nil, fmt.Errorf("invalid request: at least one product is required")
+	}
+
 	// 1. Check if account exists
 	accountResponse, err := server.accountClient.GetAccountByID(ctx, request.Order.AccountId)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to validate account: %w", err)
 	}
 	if accountResponse == nil || accountResponse.Account == nil {
-		return nil, err
+		return nil, fmt.Errorf("account not found: %s", request.Order.AccountId)
 	}
 
 	// 2. Get ordered products from catalog
@@ -60,7 +71,7 @@ func (server *GrpcServer) CreateOrUpdateOrder(ctx context.Context, request *pb.C
 	}
 	catalogResp, err := server.catalogClient.ListProductsWithIDs(ctx, productIDs)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to fetch products from catalog: %w", err)
 	}
 
 	// 3. Construct domain products
@@ -86,7 +97,7 @@ func (server *GrpcServer) CreateOrUpdateOrder(ctx context.Context, request *pb.C
 	}
 
 	if len(products) != len(request.Order.Products) {
-		return nil, fmt.Errorf("one or more products not found in catalog")
+		return nil, fmt.Errorf("validation error: one or more products not found in catalog")
 	}
 
 	// 4. Call service implementation
@@ -101,7 +112,7 @@ func (server *GrpcServer) CreateOrUpdateOrder(ctx context.Context, request *pb.C
 
 	order, err := server.orderService.CreateOrUpdateOrder(ctx, domainOrder)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to create or update order: %w", err)
 	}
 
 	// 5. Make response order
@@ -158,9 +169,23 @@ func (server *GrpcServer) GetOrderByID(ctx context.Context, request *pb.GetOrder
 }
 
 func (server *GrpcServer) GetOrdersForAccount(ctx context.Context, request *pb.GetOrdersForAccountRequest) (*pb.GetOrdersForAccountResponse, error) {
+	// Validate request
+	if request == nil || request.AccountId == "" {
+		return nil, fmt.Errorf("invalid request: account_id is required")
+	}
+
+	// Check if account exists
+	accountResponse, err := server.accountClient.GetAccountByID(ctx, request.AccountId)
+	if err != nil {
+		return nil, fmt.Errorf("failed to validate account: %w", err)
+	}
+	if accountResponse == nil || accountResponse.Account == nil {
+		return nil, fmt.Errorf("account not found: %s", request.AccountId)
+	}
+
 	orders, err := server.orderService.GetOrdersForAccount(ctx, request.AccountId)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to fetch orders: %w", err)
 	}
 
 	pbOrders := []*pb.Order{}

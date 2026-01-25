@@ -28,8 +28,9 @@ func (client *AccountClient) Close() {
 }
 
 // CreateOrUpdate Account
-func (client *AccountClient) CreateOrUpdateAccount(ctx context.Context, name, email, password string) (*pb.CreateOrUpdateAccountResponse, error) {
+func (client *AccountClient) CreateOrUpdateAccount(ctx context.Context, id, name, email, password string) (*pb.CreateOrUpdateAccountResponse, error) {
 	response, err := client.client.CreateOrUpdateAccount(ctx, &pb.CreateOrUpdateAccountRequest{
+		Id:       id,
 		Name:     name,
 		Email:    email,
 		Password: password,

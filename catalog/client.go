@@ -28,8 +28,9 @@ func (client *CatalogClient) Close() {
 }
 
 // CreateOrUpdate Product
-func (client *CatalogClient) CreateOrUpdateProduct(ctx context.Context, name, description string, price float32) (*pb.CreateOrUpdateProductResponse, error) {
+func (client *CatalogClient) CreateOrUpdateProduct(ctx context.Context, id, name, description string, price float32) (*pb.CreateOrUpdateProductResponse, error) {
 	response, err := client.client.CreateOrUpdateProduct(ctx, &pb.CreateOrUpdateProductRequest{
+		Id:          id,
 		Name:        name,
 		Description: description,
 		Price:       price,
