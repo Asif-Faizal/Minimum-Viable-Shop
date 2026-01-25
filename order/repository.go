@@ -45,7 +45,7 @@ func (repository *PostgresRepository) CreateOrUpdateOrder(ctx context.Context, o
 		}
 		err = tx.Commit()
 	}()
-	_, err = tx.ExecContext(ctx, "INSERT INTO orders (id, accountId,createdAt, totalPrice) VALUES ($1, $2, $3, $4) ON CONFLICT (id) DO UPDATE SET accountId = $2, totalPrice = $3", order.ID, order.AccountID, order.CreatedAt, order.TotalPrice)
+	_, err = tx.ExecContext(ctx, "INSERT INTO orders (id, accountId,createdAt, totalPrice) VALUES ($1, $2, $3, $4) ON CONFLICT (id) DO UPDATE SET accountId = $2, totalPrice = $4", order.ID, order.AccountID, order.CreatedAt, order.TotalPrice)
 	if err != nil {
 		return nil, err
 	}
@@ -59,11 +59,64 @@ func (repository *PostgresRepository) CreateOrUpdateOrder(ctx context.Context, o
 }
 
 func (repository *PostgresRepository) GetOrderById(ctx context.Context, id string) (*Order, error) {
-	row := repository.db.QueryRowContext(ctx, "SELECT id, createdAt, accountId, totalPrice FROM orders WHERE id = $1", id)
-	order := &Order{}
-	if err := row.Scan(&order.ID, &order.CreatedAt, &order.AccountID, &order.TotalPrice); err != nil {
+	rows, err := repository.db.QueryContext(ctx, `
+		SELECT
+			o.id, o.createdAt, o.accountId, o.totalPrice,
+			op.productId, op.quantity, op.name, op.description, op.price
+		FROM orders o
+		LEFT JOIN order_products op ON (o.id = op.orderId)
+		WHERE o.id = $1`, id)
+	if err != nil {
 		return nil, err
 	}
+	defer rows.Close()
+
+	var order *Order
+	for rows.Next() {
+		var p OrderProduct
+		var productId sql.NullString
+		var quantity sql.NullInt32
+		var name sql.NullString
+		var description sql.NullString
+		var price sql.NullFloat64
+
+		var oID string
+		var oCreatedAt time.Time
+		var oAccountID string
+		var oTotalPrice float64
+
+		if err := rows.Scan(
+			&oID, &oCreatedAt, &oAccountID, &oTotalPrice,
+			&productId, &quantity, &name, &description, &price,
+		); err != nil {
+			return nil, err
+		}
+
+		if order == nil {
+			order = &Order{
+				ID:         oID,
+				CreatedAt:  oCreatedAt,
+				AccountID:  oAccountID,
+				TotalPrice: oTotalPrice,
+				Products:   []*OrderProduct{},
+			}
+		}
+
+		if productId.Valid {
+			p.OrderID = oID
+			p.ProductID = productId.String
+			p.Quantity = quantity.Int32
+			p.ProductName = name.String
+			p.ProductDescription = description.String
+			p.Price = price.Float64
+			order.Products = append(order.Products, &p)
+		}
+	}
+
+	if order == nil {
+		return nil, sql.ErrNoRows
+	}
+
 	return order, nil
 }
 

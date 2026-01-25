@@ -10,7 +10,7 @@ import (
 )
 
 type Config struct {
-	DatabaseUrl string `envconfig:"DATABASE_URL"`
+	DatabaseUrl string `envconfig:"ELASTICSEARCH_URL"`
 	Port        int    `envconfig:"GRPC_PORT" default:"8080"`
 }
 

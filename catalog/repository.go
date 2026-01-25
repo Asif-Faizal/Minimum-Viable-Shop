@@ -101,7 +101,6 @@ func (repository *ElasticRepository) ListProductsWithIds(ctx context.Context, id
 			items,
 			elastic.NewMultiGetItem().
 				Index("catalog").
-				Type("product").
 				Id(id),
 		)
 	}

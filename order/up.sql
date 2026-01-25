@@ -2,7 +2,7 @@ CREATE TABLE IF NOT EXISTS orders (
     id CHAR(27) PRIMARY KEY,
     createdAt TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
     accountId CHAR(27) NOT NULL,
-    totalPrice MONEY NOT NULL
+    totalPrice NUMERIC(19,4) NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS order_products (
@@ -11,6 +11,6 @@ CREATE TABLE IF NOT EXISTS order_products (
   quantity INT NOT NULL,
   name VARCHAR(255) NOT NULL,
   description TEXT,
-  price MONEY NOT NULL,
+  price NUMERIC(19,4) NOT NULL,
   PRIMARY KEY (productId, orderId)
 );
