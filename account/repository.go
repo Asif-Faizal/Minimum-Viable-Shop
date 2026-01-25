@@ -39,7 +39,7 @@ func (repository *PostgresRepository) Ping() error {
 }
 
 func (repository *PostgresRepository) CreateOrUpdateAccount(ctx context.Context, account *Account) (*Account, error) {
-	_, err := repository.db.ExecContext(ctx, "INSERT INTO accounts (id, name, email, password) VALUES ($1, $2, $3, $4) ON CONFLICT (id) DO UPDATE SET name = $2, email = $3, password = COALESCE(NULLIF($4, ''), accounts.password)", account.ID, account.Name, account.Email, account.Password)
+	_, err := repository.db.ExecContext(ctx, "INSERT INTO accounts (id, name, email, password) VALUES ($1, NULLIF($2, ''), $3, $4) ON CONFLICT (id) DO UPDATE SET name = NULLIF($2, ''), email = $3, password = $4", account.ID, account.Name, account.Email, account.Password)
 	if err != nil {
 		return nil, err
 	}
@@ -49,9 +49,11 @@ func (repository *PostgresRepository) CreateOrUpdateAccount(ctx context.Context,
 func (repository *PostgresRepository) GetAccountById(ctx context.Context, id string) (*Account, error) {
 	row := repository.db.QueryRowContext(ctx, "SELECT id, name, email FROM accounts WHERE id = $1", id)
 	account := &Account{}
-	if err := row.Scan(&account.ID, &account.Name, &account.Email); err != nil {
+	var name sql.NullString
+	if err := row.Scan(&account.ID, &name, &account.Email); err != nil {
 		return nil, err
 	}
+	account.Name = name.String
 	return account, nil
 }
 
@@ -64,9 +66,11 @@ func (repository *PostgresRepository) ListAccounts(ctx context.Context, skip uin
 	accounts := []*Account{}
 	for rows.Next() {
 		account := &Account{}
-		if err := rows.Scan(&account.ID, &account.Name, &account.Email); err != nil {
+		var name sql.NullString
+		if err := rows.Scan(&account.ID, &name, &account.Email); err != nil {
 			return nil, err
 		}
+		account.Name = name.String
 		accounts = append(accounts, account)
 	}
 	if err := rows.Err(); err != nil {

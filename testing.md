@@ -1,30 +1,34 @@
 # GraphQL Testing Guide
 
-This document contains example GraphQL queries and mutations to test the API.
+This document contains full example GraphQL queries and mutations for all services.
 
 ## Mutations
 
 ### Create Account
+Mandatory fields: `email`, `password`. `name` is optional.
+
 ```graphql
 mutation CreateAccount {
   createAccount(input: {
     name: "John Doe"
+    email: "john@example.com"
+    password: "password123"
   }) {
     id
     name
-    orders {
-      id
-    }
+    email
   }
 }
 ```
 
 ### Create Product
+Create a new product in the catalog.
+
 ```graphql
 mutation CreateProduct {
   createProduct(input: {
     name: "MacBook Pro"
-    description: "M3 Max, 16-inch"
+    description: "M3 Max, 16-inch, 64GB RAM"
     price: 3499.99
   }) {
     id
@@ -36,15 +40,15 @@ mutation CreateProduct {
 ```
 
 ### Create Order
-Replace `YOUR_ACCOUNT_ID` and `YOUR_PRODUCT_ID` with actual IDs returned from the previous mutations.
+Replace `ACCOUNT_ID` and `PRODUCT_ID` below.
 
 ```graphql
 mutation CreateOrder {
   createOrder(input: {
-    accountId: "YOUR_ACCOUNT_ID"
+    accountId: "ACCOUNT_ID"
     products: [
       {
-        id: "YOUR_PRODUCT_ID"
+        id: "PRODUCT_ID"
         quantity: 1
       }
     ]
@@ -53,6 +57,7 @@ mutation CreateOrder {
     createdAt
     totalPrice
     products {
+      id
       name
       quantity
       price
@@ -69,26 +74,18 @@ query ListAccounts {
   accounts(pagination: { skip: 0, take: 10 }) {
     id
     name
-    orders {
-      id
-      totalPrice
-    }
+    email
   }
 }
 ```
 
 ### Get Account by ID
 ```graphql
-query GetAccount {
-  accounts(id: "YOUR_ACCOUNT_ID") {
+query GetAccountByID {
+  accounts(id: "ACCOUNT_ID") {
     id
     name
-    orders {
-      id
-      products {
-        name
-      }
-    }
+    email
   }
 }
 ```
@@ -99,6 +96,7 @@ query ListProducts {
   products(pagination: { skip: 0, take: 10 }) {
     id
     name
+    description
     price
   }
 }
@@ -115,3 +113,39 @@ query SearchProducts {
   }
 }
 ```
+
+### Get Order by ID
+```graphql
+query GetOrderByID {
+  order(id: "ORDER_ID") {
+    id
+    createdAt
+    totalPrice
+    accountId
+    products {
+      id
+      name
+      quantity
+      price
+    }
+  }
+}
+```
+
+### List Orders for Account
+```graphql
+query GetOrdersForAccount {
+  ordersForAccount(accountId: "ACCOUNT_ID") {
+    id
+    createdAt
+    totalPrice
+    products {
+      id
+      name
+      quantity
+      price
+    }
+  }
+}
+```
+

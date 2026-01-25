@@ -9,5 +9,8 @@ CREATE TABLE IF NOT EXISTS order_products (
   orderId CHAR(27) REFERENCES orders (id) ON DELETE CASCADE,
   productId CHAR(27),
   quantity INT NOT NULL,
+  name VARCHAR(255) NOT NULL,
+  description TEXT,
+  price MONEY NOT NULL,
   PRIMARY KEY (productId, orderId)
 );

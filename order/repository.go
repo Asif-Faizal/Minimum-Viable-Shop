@@ -50,7 +50,7 @@ func (repository *PostgresRepository) CreateOrUpdateOrder(ctx context.Context, o
 		return nil, err
 	}
 	for _, product := range order.Products {
-		_, err = tx.ExecContext(ctx, "INSERT INTO order_products (orderId, productId, quantity) VALUES ($1, $2, $3) ON CONFLICT (orderId, productId) DO UPDATE SET quantity = $3", order.ID, product.ProductID, product.Quantity)
+		_, err = tx.ExecContext(ctx, "INSERT INTO order_products (orderId, productId, quantity, name, description, price) VALUES ($1, $2, $3, $4, $5, $6) ON CONFLICT (orderId, productId) DO UPDATE SET quantity = $3, name = $4, description = $5, price = $6", order.ID, product.ProductID, product.Quantity, product.ProductName, product.ProductDescription, product.Price)
 		if err != nil {
 			return nil, err
 		}
@@ -77,12 +77,11 @@ func (repository *PostgresRepository) GetOrdersForAccount(ctx context.Context, a
 			o.totalPrice,
 			op.productId,
 			op.quantity,
-			p.name,
-			p.description,
-			p.price
+			op.name,
+			op.description,
+			op.price
 		FROM orders o
 		JOIN order_products op ON (o.id = op.orderId)
-		JOIN products p ON (op.productId = p.id)
 		WHERE o.accountId = $1
 		ORDER BY o.createdAt DESC`,
 		accountId,

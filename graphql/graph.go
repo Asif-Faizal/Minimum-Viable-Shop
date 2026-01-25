@@ -63,6 +63,7 @@ func (s *Server) Close() error {
 	}
 	return nil
 }
+
 func (s *Server) Mutation() MutationResolver {
 	return &mutationResolver{
 		server: s,

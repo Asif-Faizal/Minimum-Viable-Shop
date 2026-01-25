@@ -20,10 +20,15 @@ func (r *queryResolver) Accounts(ctx context.Context, pagination *PaginationInpu
 		if accountResp == nil || accountResp.Account == nil {
 			return nil, fmt.Errorf("account not found: %s", *id)
 		}
+		var accountName *string
+		if accountResp.Account.Name != "" {
+			accountName = &accountResp.Account.Name
+		}
 		return []*Account{
 			{
-				ID:   accountResp.Account.Id,
-				Name: accountResp.Account.Name,
+				ID:    accountResp.Account.Id,
+				Name:  accountName,
+				Email: accountResp.Account.Email,
 			},
 		}, nil
 	}
@@ -48,9 +53,14 @@ func (r *queryResolver) Accounts(ctx context.Context, pagination *PaginationInpu
 
 	accounts := make([]*Account, 0, len(accountsResp.Accounts))
 	for _, acc := range accountsResp.Accounts {
+		var accountName *string
+		if acc.Name != "" {
+			accountName = &acc.Name
+		}
 		accounts = append(accounts, &Account{
-			ID:   acc.Id,
-			Name: acc.Name,
+			ID:    acc.Id,
+			Name:  accountName,
+			Email: acc.Email,
 		})
 	}
 	return accounts, nil
@@ -123,4 +133,65 @@ func (r *queryResolver) Products(ctx context.Context, pagination *PaginationInpu
 		})
 	}
 	return products, nil
+}
+
+// Order retrieves a single order by ID
+func (r *queryResolver) Order(ctx context.Context, id string) (*Order, error) {
+	orderResp, err := r.server.orderClient.GetOrderByID(ctx, id)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch order: %w", err)
+	}
+	if orderResp == nil || orderResp.Order == nil {
+		return nil, fmt.Errorf("order not found: %s", id)
+	}
+
+	orderedProducts := make([]*OrderedProduct, 0, len(orderResp.Order.Products))
+	for _, p := range orderResp.Order.Products {
+		orderedProducts = append(orderedProducts, &OrderedProduct{
+			ID:          p.ProductId,
+			Name:        p.ProductName,
+			Description: p.ProductDescription,
+			Price:       p.Price,
+			Quantity:    int(p.Quantity),
+		})
+	}
+	createdAt := orderResp.Order.CreatedAt.AsTime()
+	return &Order{
+		ID:         orderResp.Order.Id,
+		CreatedAt:  createdAt,
+		AccountID:  orderResp.Order.AccountId,
+		TotalPrice: orderResp.Order.TotalPrice,
+		Products:   orderedProducts,
+	}, nil
+}
+
+// OrdersForAccount retrieves all orders for a given account
+func (r *queryResolver) OrdersForAccount(ctx context.Context, accountID string) ([]*Order, error) {
+	ordersResp, err := r.server.orderClient.ListOrdersForAccount(ctx, accountID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list orders for account: %w", err)
+	}
+
+	orders := make([]*Order, 0, len(ordersResp.Orders))
+	for _, o := range ordersResp.Orders {
+		orderedProducts := make([]*OrderedProduct, 0, len(o.Products))
+		for _, p := range o.Products {
+			orderedProducts = append(orderedProducts, &OrderedProduct{
+				ID:          p.ProductId,
+				Name:        p.ProductName,
+				Description: p.ProductDescription,
+				Price:       p.Price,
+				Quantity:    int(p.Quantity),
+			})
+		}
+		createdAt := o.CreatedAt.AsTime()
+		orders = append(orders, &Order{
+			ID:         o.Id,
+			CreatedAt:  createdAt,
+			AccountID:  o.AccountId,
+			TotalPrice: o.TotalPrice,
+			Products:   orderedProducts,
+		})
+	}
+	return orders, nil
 }

@@ -2,7 +2,8 @@ scalar Time
 
 type Account {
   id: String!
-  name: String!
+  name: String
+  email: String!
   orders: [Order!]!
 }
 
@@ -36,7 +37,9 @@ input PaginationInput {
 
 input AccountInput {
   id: String
-  name: String!
+  name: String
+  email: String!
+  password: String!
 }
 
 input ProductInput {
@@ -60,6 +63,8 @@ input OrderInput {
 type Query {
   accounts(pagination: PaginationInput, id: String): [Account!]!
   products(pagination: PaginationInput, id: String, query: String): [Product!]!
+  order(id: String!): Order
+  ordersForAccount(accountId: String!): [Order!]!
 }
 
 type Mutation {
