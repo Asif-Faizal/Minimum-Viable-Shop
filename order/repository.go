@@ -101,7 +101,7 @@ func (repository *PostgresRepository) GetOrdersForAccount(ctx context.Context, a
 		var accountID string
 		var totalPrice float64
 		var productID string
-		var quantity int
+		var quantity int32
 		var productName string
 		var productDescription string
 		var productPrice float64
