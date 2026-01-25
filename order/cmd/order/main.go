@@ -13,6 +13,7 @@ type Config struct {
 	DatabaseUrl string `envconfig:"DATABASE_URL"`
 	AccountUrl  string `envconfig:"ACCOUNT_SERVICE_URL"`
 	CatalogUrl  string `envconfig:"CATALOG_SERVICE_URL"`
+	Port        int    `envconfig:"GRPC_PORT" default:"8080"`
 }
 
 func main() {
@@ -33,6 +34,6 @@ func main() {
 	defer repository.Close()
 	log.Println("connected to database")
 	service := order.NewOrderService(repository)
-	log.Fatal(order.ListenGrpcServer(service, config.AccountUrl, config.CatalogUrl, 8080))
+	log.Fatal(order.ListenGrpcServer(service, config.AccountUrl, config.CatalogUrl, config.Port))
 	log.Println("order service started")
 }

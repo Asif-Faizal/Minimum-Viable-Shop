@@ -11,6 +11,7 @@ import (
 
 type Config struct {
 	DatabaseUrl string `envconfig:"DATABASE_URL"`
+	Port        int    `envconfig:"GRPC_PORT" default:"8080"`
 }
 
 func main() {
@@ -31,6 +32,6 @@ func main() {
 	defer repository.Close()
 	log.Println("connected to database")
 	service := account.NewAccountService(repository)
-	log.Fatal(account.ListenGrpcServer(service, 8080))
+	log.Fatal(account.ListenGrpcServer(service, config.Port))
 	log.Println("account service started")
 }

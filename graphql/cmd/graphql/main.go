@@ -46,7 +46,7 @@ func main() {
 	mux := http.NewServeMux()
 
 	// GraphQL endpoint
-	mux.Handle("/graphql", handler.New(server.ToExecutableSchema()))
+	mux.Handle("/graphql", handler.NewDefaultServer(server.ToExecutableSchema()))
 
 	// Playground endpoint
 	mux.Handle("/playground", playground.Handler("GraphQL Playground", "/graphql"))

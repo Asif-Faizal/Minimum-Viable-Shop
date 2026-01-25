@@ -1,12 +1,5 @@
 version: "3.9"
 
-networks:
-  microservices:
-    driver: bridge
-    ipam:
-      config:
-        - subnet: 172.20.0.0/16
-
 volumes:
   account_db_data:
   catalog_db_data:
@@ -26,9 +19,6 @@ services:
     volumes:
       - account_db_data:/var/lib/postgresql/data
       - ./account/up.sql:/docker-entrypoint-initdb.d/01-init.sql
-    networks:
-      microservices:
-        ipv4_address: 172.20.0.2
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${ACCOUNT_DB_USER:-postgres}"]
       interval: 10s
@@ -53,9 +43,6 @@ services:
       ENVIRONMENT: ${ENVIRONMENT:-production}
     ports:
       - "50051:50051"
-    networks:
-      microservices:
-        ipv4_address: 172.20.0.3
     healthcheck:
       test: ["CMD", "test", "-f", "/app/account-server"]
     restart: unless-stopped
@@ -73,9 +60,6 @@ services:
       - "9200:9200"
     volumes:
       - catalog_db_data:/usr/share/elasticsearch/data
-    networks:
-      microservices:
-        ipv4_address: 172.20.0.4
     healthcheck:
       test: ["CMD-SHELL", "curl -s http://localhost:9200 | grep -q 'You Know, for Search'"]
       interval: 10s
@@ -101,9 +85,6 @@ services:
       ENVIRONMENT: ${ENVIRONMENT:-production}
     ports:
       - "50052:50052"
-    networks:
-      microservices:
-        ipv4_address: 172.20.0.5
     healthcheck:
       test: ["CMD", "test", "-f", "/app/catalog-server"]
     restart: unless-stopped
@@ -121,9 +102,6 @@ services:
     volumes:
       - order_db_data:/var/lib/postgresql/data
       - ./order/up.sql:/docker-entrypoint-initdb.d/01-init.sql
-    networks:
-      microservices:
-        ipv4_address: 172.20.0.6
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${ORDER_DB_USER:-postgres}"]
       interval: 10s
@@ -155,9 +133,6 @@ services:
       ENVIRONMENT: ${ENVIRONMENT:-production}
     ports:
       - "50053:50053"
-    networks:
-      microservices:
-        ipv4_address: 172.20.0.7
     healthcheck:
       test: ["CMD", "test", "-f", "/app/order-server"]
       interval: 15s
@@ -189,9 +164,6 @@ services:
       ENVIRONMENT: ${ENVIRONMENT:-production}
     ports:
       - "8080:8080"
-    networks:
-      microservices:
-        ipv4_address: 172.20.0.8
     healthcheck:
       test: ["CMD", "curl", "-f", "http://127.0.0.1:8080/health"]
       interval: 15s
