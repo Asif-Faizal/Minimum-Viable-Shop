@@ -1,21 +1,125 @@
 package graphql
 
+import (
+	"context"
+	"fmt"
+
+	orderpb "github.com/Asif-Faizal/Minimum-Viable-Shop/order/pb/pb"
+	"google.golang.org/protobuf/types/known/timestamppb"
+)
+
 type mutationResolver struct {
 	server *Server
 }
 
-// func (r *mutationResolver) CreateAccount(ctx context.Context, input CreateAccountInput) (*Account, error) {
-// 	return r.server.accountClient.CreateAccount(ctx, input)
-// }
+// CreateAccount creates a new account
+func (r *mutationResolver) CreateAccount(ctx context.Context, input AccountInput) (*Account, error) {
+	// Validate input
+	if input.Name == "" {
+		return nil, fmt.Errorf("account name is required")
+	}
 
-// func (r *mutationResolver) CreateProduct(ctx context.Context, input CreateProductInput) (*Product, error) {
-// 	return r.server.catalogClient.CreateProduct(ctx, input)
-// }
+	// Call account service
+	resp, err := r.server.accountClient.CreateOrUpdateAccount(ctx, "", input.Name, "", "")
+	if err != nil {
+		return nil, fmt.Errorf("failed to create account: %w", err)
+	}
 
-// func (r *mutationResolver) CreateOrder(ctx context.Context, input CreateOrderInput) (*Order, error) {
-// 	return r.server.orderClient.CreateOrder(ctx, input)
-// }
+	if resp == nil || resp.Account == nil {
+		return nil, fmt.Errorf("unexpected response from account service")
+	}
 
-// create account mutation
-// create product mutation
-// create order mutation
+	return &Account{
+		ID:   resp.Account.Id,
+		Name: resp.Account.Name,
+	}, nil
+}
+
+// CreateProduct creates a new product in the catalog
+func (r *mutationResolver) CreateProduct(ctx context.Context, input ProductInput) (*Product, error) {
+	// Validate input
+	if input.Name == "" {
+		return nil, fmt.Errorf("product name is required")
+	}
+	if input.Price <= 0 {
+		return nil, fmt.Errorf("product price must be positive")
+	}
+
+	// Call catalog service (convert float64 to float32)
+	response, err := r.server.catalogClient.CreateOrUpdateProduct(ctx, "", input.Name, input.Description, float32(input.Price))
+	if err != nil {
+		return nil, fmt.Errorf("failed to create product: %w", err)
+	}
+
+	if response == nil || response.Product == nil {
+		return nil, fmt.Errorf("unexpected response from catalog service")
+	}
+
+	return &Product{
+		ID:          response.Product.Id,
+		Name:        response.Product.Name,
+		Description: response.Product.Description,
+		Price:       float64(response.Product.Price),
+	}, nil
+}
+
+// CreateOrder creates a new order
+func (r *mutationResolver) CreateOrder(ctx context.Context, input OrderInput) (*Order, error) {
+	// Validate input
+	if input.AccountID == "" {
+		return nil, fmt.Errorf("account_id is required")
+	}
+	if len(input.Products) == 0 {
+		return nil, fmt.Errorf("order must contain at least one product")
+	}
+
+	// Convert input products to proto format
+	protoProducts := make([]*orderpb.OrderProduct, 0, len(input.Products))
+	for _, product := range input.Products {
+		if product.ID == "" {
+			return nil, fmt.Errorf("product id is required")
+		}
+		if product.Quantity <= 0 {
+			return nil, fmt.Errorf("product quantity must be positive")
+		}
+		protoProducts = append(protoProducts, &orderpb.OrderProduct{
+			ProductId: product.ID,
+			Quantity:  int32(product.Quantity),
+		})
+	}
+
+	// Call order service
+	response, err := r.server.orderClient.CreateOrUpdateOrder(ctx, &orderpb.Order{
+		Id:        "", // Empty ID for new order
+		AccountId: input.AccountID,
+		Products:  protoProducts,
+		CreatedAt: timestamppb.Now(),
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to create order: %w", err)
+	}
+
+	if response == nil || response.Order == nil {
+		return nil, fmt.Errorf("unexpected response from order service")
+	}
+
+	// Convert response to GraphQL type
+	orderedProducts := make([]*OrderedProduct, 0, len(response.Order.Products))
+	for _, product := range response.Order.Products {
+		orderedProducts = append(orderedProducts, &OrderedProduct{
+			ID:          product.ProductId,
+			Name:        product.ProductName,
+			Description: product.ProductDescription,
+			Price:       product.Price,
+			Quantity:    int(product.Quantity),
+		})
+	}
+
+	createdAt := response.Order.CreatedAt.AsTime()
+	return &Order{
+		ID:         response.Order.Id,
+		CreatedAt:  createdAt,
+		TotalPrice: response.Order.TotalPrice,
+		Products:   orderedProducts,
+	}, nil
+}

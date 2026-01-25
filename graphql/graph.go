@@ -1,6 +1,8 @@
 package graphql
 
 import (
+	"fmt"
+
 	"github.com/99designs/gqlgen/graphql"
 	"github.com/Asif-Faizal/Minimum-Viable-Shop/account"
 	"github.com/Asif-Faizal/Minimum-Viable-Shop/catalog"
@@ -13,25 +15,34 @@ type Server struct {
 	orderClient   *order.OrderClient
 }
 
-func NewGraphQLServer(accountUrl, catalogUrl, orderUrl string) (*Server, error) {
-	accountClient, err := account.NewAccountClient(accountUrl)
+// NewGraphQLServer initializes and returns a new GraphQL server with all microservice clients
+func NewGraphQLServer(accountURL, catalogURL, orderURL string) (*Server, error) {
+	// Validate URLs
+	if accountURL == "" || catalogURL == "" || orderURL == "" {
+		return nil, fmt.Errorf("all service URLs must be provided")
+	}
+
+	// Initialize Account Client
+	accountClient, err := account.NewAccountClient(accountURL)
+	if err != nil {
+		return nil, fmt.Errorf("failed to connect to account service: %w", err)
+	}
+
+	// Initialize Catalog Client
+	catalogClient, err := catalog.NewCatalogClient(catalogURL)
 	if err != nil {
 		accountClient.Close()
-		return nil, err
+		return nil, fmt.Errorf("failed to connect to catalog service: %w", err)
 	}
-	catalogClient, err := catalog.NewElasticRepository(catalogUrl)
+
+	// Initialize Order Client
+	orderClient, err := order.NewOrderClient(orderURL)
 	if err != nil {
 		accountClient.Close()
 		catalogClient.Close()
-		return nil, err
+		return nil, fmt.Errorf("failed to connect to order service: %w", err)
 	}
-	orderClient, err := order.NewClient(orderUrl)
-	if err != nil {
-		accountClient.Close()
-		catalogClient.Close()
-		orderClient.Close()
-		return nil, err
-	}
+
 	return &Server{
 		accountClient: accountClient,
 		catalogClient: catalogClient,
@@ -39,6 +50,19 @@ func NewGraphQLServer(accountUrl, catalogUrl, orderUrl string) (*Server, error) 
 	}, nil
 }
 
+// Close gracefully closes all client connections
+func (s *Server) Close() error {
+	if s.accountClient != nil {
+		s.accountClient.Close()
+	}
+	if s.catalogClient != nil {
+		s.catalogClient.Close()
+	}
+	if s.orderClient != nil {
+		s.orderClient.Close()
+	}
+	return nil
+}
 func (s *Server) Mutation() MutationResolver {
 	return &mutationResolver{
 		server: s,
