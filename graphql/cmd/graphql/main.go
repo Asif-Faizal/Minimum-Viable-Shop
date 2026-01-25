@@ -1,4 +1,4 @@
-package graphql
+package main
 
 import (
 	"context"
@@ -12,6 +12,7 @@ import (
 
 	"github.com/99designs/gqlgen/graphql/handler"
 	"github.com/99designs/gqlgen/graphql/playground"
+	"github.com/Asif-Faizal/Minimum-Viable-Shop/graphql"
 	"github.com/kelseyhightower/envconfig"
 )
 
@@ -31,7 +32,7 @@ func main() {
 	}
 
 	// Initialize GraphQL server
-	server, err := NewGraphQLServer(cfg.AccountURL, cfg.CatalogURL, cfg.OrderURL)
+	server, err := graphql.NewGraphQLServer(cfg.AccountURL, cfg.CatalogURL, cfg.OrderURL)
 	if err != nil {
 		log.Fatalf("failed to initialize GraphQL server: %v", err)
 	}

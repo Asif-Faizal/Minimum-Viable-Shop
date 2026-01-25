@@ -53,10 +53,12 @@ type Order {
 }
 
 input AccountInput {
+  id: String
   name: String!
 }
 
 input ProductInput {
+  id: String
   name: String!
   description: String!
   price: Float!

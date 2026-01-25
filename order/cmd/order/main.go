@@ -11,8 +11,8 @@ import (
 
 type Config struct {
 	DatabaseUrl string `envconfig:"DATABASE_URL"`
-	AccountUrl  string `envconfig:"ACCOUNT_SERVICES_URL"`
-	CatalogUrl  string `envconfig:"CATALOG_SERVICES_URL"`
+	AccountUrl  string `envconfig:"ACCOUNT_SERVICE_URL"`
+	CatalogUrl  string `envconfig:"CATALOG_SERVICE_URL"`
 }
 
 func main() {

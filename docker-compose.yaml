@@ -1,8 +1,201 @@
+version: "3.9"
+
+networks:
+  microservices:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+
+volumes:
+  account_db_data:
+  catalog_db_data:
+  order_db_data:
+
 services:
-  account:
-  catalog:
-  order:
-  graphql:
+  # ==================== ACCOUNT DB ====================
   account_db:
+    image: postgres:15-alpine
+    container_name: account_db
+    environment:
+      POSTGRES_USER: ${ACCOUNT_DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${ACCOUNT_DB_PASSWORD:-postgres}
+      POSTGRES_DB: ${ACCOUNT_DB_NAME:-account_db}
+    ports:
+      - "5433:5432"
+    volumes:
+      - account_db_data:/var/lib/postgresql/data
+      - ./account/up.sql:/docker-entrypoint-initdb.d/01-init.sql
+    networks:
+      microservices:
+        ipv4_address: 172.20.0.2
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${ACCOUNT_DB_USER:-postgres}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+
+  # ==================== ACCOUNT SERVICE ====================
+  account:
+    build:
+      context: .
+      dockerfile: account/app.dockerfile
+    container_name: account_service
+    depends_on:
+      account_db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgres://${ACCOUNT_DB_USER:-postgres}:${ACCOUNT_DB_PASSWORD:-postgres}@account_db:5432/${ACCOUNT_DB_NAME:-account_db}?sslmode=disable
+      GRPC_PORT: "50051"
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      ENVIRONMENT: ${ENVIRONMENT:-production}
+    ports:
+      - "50051:50051"
+    networks:
+      microservices:
+        ipv4_address: 172.20.0.3
+    healthcheck:
+      test: ["CMD", "test", "-f", "/app/account-server"]
+    restart: unless-stopped
+
+  # ==================== CATALOG DB (ELASTICSEARCH) ====================
   catalog_db:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.14.0
+    container_name: catalog_db
+    environment:
+      discovery.type: single-node
+      xpack.security.enabled: "false"
+      xpack.security.enrollment.enabled: "false"
+      ES_JAVA_OPTS: "-Xms512m -Xmx512m"
+    ports:
+      - "9200:9200"
+    volumes:
+      - catalog_db_data:/usr/share/elasticsearch/data
+    networks:
+      microservices:
+        ipv4_address: 172.20.0.4
+    healthcheck:
+      test: ["CMD-SHELL", "curl -s http://localhost:9200 | grep -q 'You Know, for Search'"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    restart: unless-stopped
+
+  # ==================== CATALOG SERVICE ====================
+  catalog:
+    build:
+      context: .
+      dockerfile: catalog/app.dockerfile
+    container_name: catalog_service
+    depends_on:
+      catalog_db:
+        condition: service_healthy
+    environment:
+      ELASTICSEARCH_URL: http://catalog_db:9200
+      ELASTICSEARCH_INDEX: ${ELASTICSEARCH_INDEX:-products}
+      GRPC_PORT: "50052"
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      ENVIRONMENT: ${ENVIRONMENT:-production}
+    ports:
+      - "50052:50052"
+    networks:
+      microservices:
+        ipv4_address: 172.20.0.5
+    healthcheck:
+      test: ["CMD", "test", "-f", "/app/catalog-server"]
+    restart: unless-stopped
+
+  # ==================== ORDER DB ====================
   order_db:
+    image: postgres:15-alpine
+    container_name: order_db
+    environment:
+      POSTGRES_USER: ${ORDER_DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${ORDER_DB_PASSWORD:-postgres}
+      POSTGRES_DB: ${ORDER_DB_NAME:-order_db}
+    ports:
+      - "5434:5432"
+    volumes:
+      - order_db_data:/var/lib/postgresql/data
+      - ./order/up.sql:/docker-entrypoint-initdb.d/01-init.sql
+    networks:
+      microservices:
+        ipv4_address: 172.20.0.6
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${ORDER_DB_USER:-postgres}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+
+  # ==================== ORDER SERVICE ====================
+  order:
+    build:
+      context: .
+      dockerfile: order/app.dockerfile
+    container_name: order_service
+    depends_on:
+      order_db:
+        condition: service_healthy
+      account:
+        condition: service_healthy
+      catalog:
+        condition: service_healthy
+    environment:
+      DB_CONNECT_RETRIES: 10
+      DATABASE_URL: postgres://${ORDER_DB_USER:-postgres}:${ORDER_DB_PASSWORD:-postgres}@order_db:5432/${ORDER_DB_NAME:-order_db}?sslmode=disable
+      ACCOUNT_SERVICE_URL: account:50051
+      CATALOG_SERVICE_URL: catalog:50052
+      GRPC_PORT: "50053"
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      ENVIRONMENT: ${ENVIRONMENT:-production}
+    ports:
+      - "50053:50053"
+    networks:
+      microservices:
+        ipv4_address: 172.20.0.7
+    healthcheck:
+      test: ["CMD", "test", "-f", "/app/order-server"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    restart: unless-stopped
+
+  # ==================== GRAPHQL GATEWAY ====================
+  graphql:
+    build:
+      context: .
+      dockerfile: graphql/app.dockerfile
+    container_name: graphql_gateway
+    depends_on:
+      account:
+        condition: service_healthy
+      catalog:
+        condition: service_healthy
+      order:
+        condition: service_healthy
+    environment:
+      DB_CONNECT_RETRIES: 10
+      ACCOUNT_SERVICE_URL: account:50051
+      CATALOG_SERVICE_URL: catalog:50052
+      ORDER_SERVICE_URL: order:50053
+      HTTP_PORT: "8080"
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      ENVIRONMENT: ${ENVIRONMENT:-production}
+    ports:
+      - "8080:8080"
+    networks:
+      microservices:
+        ipv4_address: 172.20.0.8
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://127.0.0.1:8080/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    restart: unless-stopped
