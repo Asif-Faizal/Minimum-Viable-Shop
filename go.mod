@@ -4,6 +4,7 @@ go 1.24.0
 
 require (
 	github.com/99designs/gqlgen v0.17.85
+	github.com/golang-jwt/jwt/v5 v5.3.0
 	github.com/grpc-ecosystem/go-grpc-middleware v1.4.0
 	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/lib/pq v1.10.9

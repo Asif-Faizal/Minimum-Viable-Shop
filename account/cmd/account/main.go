@@ -15,6 +15,7 @@ type Config struct {
 	Port        int    `envconfig:"GRPC_PORT" default:"8080"`
 	RestPort    int    `envconfig:"REST_PORT" default:"8081"`
 	LogLevel    string `envconfig:"LOG_LEVEL" default:"info"`
+	JwtSecret   string `envconfig:"JWT_SECRET" default:"my-secret-key"`
 }
 
 func main() {
@@ -39,7 +40,7 @@ func main() {
 
 	logger.Service().Info().Msg("connected to database")
 
-	service := account.NewAccountService(repository)
+	service := account.NewAccountService(repository, config.JwtSecret)
 
 	// Start REST server for health check in a goroutine
 	go func() {

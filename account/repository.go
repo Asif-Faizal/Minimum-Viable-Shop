@@ -15,6 +15,8 @@ type Repository interface {
 	GetAccountById(ctx context.Context, id string) (*Account, error)
 	ListAccounts(ctx context.Context, skip uint, take uint) ([]*Account, error)
 	CheckEmailExists(ctx context.Context, email string) (bool, error)
+	GetAccountByEmail(ctx context.Context, email string) (*Account, error)
+	CreateSession(ctx context.Context, session *Session) error
 }
 
 type PostgresRepository struct {
@@ -132,4 +134,49 @@ func (repository *PostgresRepository) CheckEmailExists(ctx context.Context, emai
 		return false, err
 	}
 	return exists, nil
+}
+
+func (repository *PostgresRepository) GetAccountByEmail(ctx context.Context, email string) (*Account, error) {
+	start := time.Now()
+	query := "SELECT id, name, email, password FROM accounts WHERE email = $1"
+
+	row := repository.db.QueryRowContext(ctx, query, email)
+	account := &Account{}
+	var name sql.NullString
+	err := row.Scan(&account.ID, &name, &account.Email, &account.Password)
+
+	repository.logger.Database().Debug().
+		Str("query", query).
+		Str("duration", time.Since(start).String()).
+		Bool("success", err == nil).
+		Msg("Query Row")
+
+	if err != nil {
+		return nil, err
+	}
+	account.Name = name.String
+	return account, nil
+}
+
+func (repository *PostgresRepository) CreateSession(ctx context.Context, session *Session) error {
+	start := time.Now()
+	query := "INSERT INTO sessions (id, account_id, access_token, refresh_token, expires_at, created_at, is_revoked) VALUES ($1, $2, $3, $4, $5, $6, $7)"
+
+	_, err := repository.db.ExecContext(ctx, query,
+		session.ID,
+		session.AccountID,
+		session.AccessToken,
+		session.RefreshToken,
+		session.ExpiresAt,
+		session.CreatedAt,
+		session.IsRevoked,
+	)
+
+	repository.logger.Database().Debug().
+		Str("query", query).
+		Str("duration", time.Since(start).String()).
+		Bool("success", err == nil).
+		Msg("Execute Query")
+
+	return err
 }

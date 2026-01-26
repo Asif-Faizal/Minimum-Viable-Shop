@@ -2,6 +2,8 @@ package account
 
 import (
 	"context"
+	"errors"
+	"time"
 
 	"github.com/Asif-Faizal/Minimum-Viable-Shop/util"
 	"github.com/segmentio/ksuid"
@@ -12,14 +14,19 @@ type Service interface {
 	GetAccountByID(ctx context.Context, id string) (*Account, error)
 	ListAccounts(ctx context.Context, skip uint, take uint) ([]*Account, error)
 	CheckEmailExists(ctx context.Context, email string) (bool, error)
+	Login(ctx context.Context, email string, password string) (*AuthenticatedResponse, error)
 }
 
 type AccountService struct {
 	repository Repository
+	jwtSecret  string
 }
 
-func NewAccountService(repository Repository) *AccountService {
-	return &AccountService{repository: repository}
+func NewAccountService(repository Repository, jwtSecret string) *AccountService {
+	return &AccountService{
+		repository: repository,
+		jwtSecret:  jwtSecret,
+	}
 }
 
 func (service *AccountService) CreateOrUpdateAccount(ctx context.Context, account *Account) (*Account, error) {
@@ -72,4 +79,42 @@ func (service *AccountService) CheckEmailExists(ctx context.Context, email strin
 		return false, err
 	}
 	return exists, nil
+}
+
+func (service *AccountService) Login(ctx context.Context, email string, password string) (*AuthenticatedResponse, error) {
+	account, err := service.repository.GetAccountByEmail(ctx, email)
+	if err != nil {
+		return nil, errors.New("invalid email or password")
+	}
+
+	if !util.CheckPasswordHash(password, account.Password) {
+		return nil, errors.New("invalid email or password")
+	}
+
+	accessToken, err := util.GenerateToken(account.ID, account.Email, service.jwtSecret, 15*time.Minute)
+	if err != nil {
+		return nil, err
+	}
+
+	refreshToken := ksuid.New().String()
+
+	session := &Session{
+		ID:           ksuid.New().String(),
+		AccountID:    account.ID,
+		AccessToken:  accessToken,
+		RefreshToken: refreshToken,
+		ExpiresAt:    time.Now().Add(7 * 24 * time.Hour),
+		CreatedAt:    time.Now(),
+		IsRevoked:    false,
+	}
+
+	if err := service.repository.CreateSession(ctx, session); err != nil {
+		return nil, err
+	}
+
+	return &AuthenticatedResponse{
+		Account:      account,
+		AccessToken:  accessToken,
+		RefreshToken: refreshToken,
+	}, nil
 }
