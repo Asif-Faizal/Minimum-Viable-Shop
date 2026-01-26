@@ -12,6 +12,7 @@ import (
 type Config struct {
 	DatabaseUrl string `envconfig:"DATABASE_URL"`
 	Port        int    `envconfig:"GRPC_PORT" default:"8080"`
+	RestPort    int    `envconfig:"REST_PORT" default:"8081"`
 	LogLevel    string `envconfig:"LOG_LEVEL" default:"info"`
 }
 
@@ -39,6 +40,15 @@ func main() {
 
 	service := account.NewAccountService(repository)
 
+	// Start REST server for health check in a goroutine
+	go func() {
+		logger.Service().Info().Int("port", config.RestPort).Msg("starting REST server")
+		if err := account.ListenRestServer(service, logger, config.RestPort); err != nil {
+			logger.Service().Fatal().Err(err).Msg("failed to start REST server")
+		}
+	}()
+
+	// Start gRPC server (blocks)
 	logger.Service().Info().Int("port", config.Port).Msg("starting account service")
 
 	if err := account.ListenGrpcServer(service, logger, config.Port); err != nil {

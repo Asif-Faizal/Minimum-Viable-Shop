@@ -2,10 +2,12 @@ package account
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net"
+	"net/http"
 
-	"github.com/grpc-ecosystem/go-grpc-middleware"
+	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 
@@ -16,6 +18,11 @@ type GrpcServer struct {
 	accountService Service
 	logger         Logger
 	pb.UnimplementedAccountServiceServer
+}
+
+type restServer struct {
+	service Service
+	logger  Logger
 }
 
 func ListenGrpcServer(service Service, logger Logger, port int) error {
@@ -39,6 +46,33 @@ func ListenGrpcServer(service Service, logger Logger, port int) error {
 
 	logger.Transport().Info().Int("port", port).Msg("gRPC server listening")
 	return grpcServer.Serve(lis)
+}
+
+func ListenRestServer(service Service, logger Logger, port int) error {
+	addr := fmt.Sprintf(":%d", port)
+	server := &restServer{
+		service: service,
+		logger:  logger,
+	}
+
+	mux := http.NewServeMux()
+	mux.HandleFunc("/health", server.handleHealth)
+
+	return http.ListenAndServe(addr, mux)
+}
+
+func (s *restServer) handleHealth(w http.ResponseWriter, r *http.Request) {
+	s.logger.Transport().Info().
+		Str("method", r.Method).
+		Str("path", r.URL.Path).
+		Msg("REST Request")
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]string{
+		"status":  "healthy",
+		"service": "account",
+	})
 }
 
 func (server *GrpcServer) CreateOrUpdateAccount(ctx context.Context, request *pb.CreateOrUpdateAccountRequest) (*pb.CreateOrUpdateAccountResponse, error) {
