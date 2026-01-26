@@ -56,13 +56,13 @@ func ListenRestServer(service Service, logger util.Logger, port int) error {
 	return http.ListenAndServe(addr, handler)
 }
 
-func (s *restServer) handleHealth(w http.ResponseWriter, r *http.Request) {
+func (s *restServer) HealthCheck(w http.ResponseWriter, r *http.Request) {
 	util.WriteJSONResponse(w, http.StatusOK, true, "", map[string]string{
 		"service": "account",
 	})
 }
 
-func (s *restServer) handleCheckEmail(w http.ResponseWriter, r *http.Request) {
+func (s *restServer) HandleCheckEmail(w http.ResponseWriter, r *http.Request) {
 	email := r.URL.Query().Get("email")
 	if email == "" {
 		http.Error(w, "email is required", http.StatusBadRequest)
@@ -88,7 +88,7 @@ func (s *restServer) handleCheckEmail(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func (s *restServer) handleLogin(w http.ResponseWriter, r *http.Request) {
+func (s *restServer) HandleLogin(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		return
@@ -100,27 +100,22 @@ func (s *restServer) handleLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	deviceID := r.Header.Get("X-Device-ID")
-	if deviceID == "" {
-		util.WriteJSONResponse(w, http.StatusBadRequest, false, "X-Device-ID header is required", nil)
+	dInfo, err := util.ExtractDeviceInfo(r)
+	if err != nil {
+		util.WriteJSONResponse(w, http.StatusBadRequest, false, err.Error(), nil)
 		return
 	}
 
-	ip := r.Header.Get("X-Forwarded-For")
-	if ip == "" {
-		ip = r.RemoteAddr
-	}
-
 	deviceInfo := &DeviceInfo{
-		DeviceType:      r.Header.Get("X-Device-Type"),
-		DeviceModel:     r.Header.Get("X-Device-Model"),
-		DeviceOS:        r.Header.Get("X-Device-OS"),
-		DeviceOSVersion: r.Header.Get("X-Device-OS-Version"),
-		UserAgent:       r.Header.Get("User-Agent"),
-		IPAddress:       ip,
+		DeviceType:      dInfo.DeviceType,
+		DeviceModel:     dInfo.DeviceModel,
+		DeviceOS:        dInfo.DeviceOS,
+		DeviceOSVersion: dInfo.DeviceOSVersion,
+		UserAgent:       dInfo.UserAgent,
+		IPAddress:       dInfo.IPAddress,
 	}
 
-	response, err := s.service.Login(r.Context(), req.Email, req.Password, deviceID, deviceInfo)
+	response, err := s.service.Login(r.Context(), req.Email, req.Password, dInfo.DeviceID, deviceInfo)
 	if err != nil {
 		util.WriteJSONResponse(w, http.StatusUnauthorized, false, err.Error(), nil)
 		return
@@ -129,7 +124,7 @@ func (s *restServer) handleLogin(w http.ResponseWriter, r *http.Request) {
 	util.WriteJSONResponse(w, http.StatusOK, true, "Login successful", response)
 }
 
-func (s *restServer) handleLogout(w http.ResponseWriter, r *http.Request) {
+func (s *restServer) HandleLogout(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		return
@@ -142,7 +137,13 @@ func (s *restServer) handleLogout(w http.ResponseWriter, r *http.Request) {
 	}
 	accessToken := authHeader[7:]
 
-	if err := s.service.Logout(r.Context(), accessToken); err != nil {
+	dInfo, err := util.ExtractDeviceInfo(r)
+	if err != nil {
+		util.WriteJSONResponse(w, http.StatusBadRequest, false, err.Error(), nil)
+		return
+	}
+
+	if err := s.service.Logout(r.Context(), accessToken, dInfo.DeviceID); err != nil {
 		util.WriteJSONResponse(w, http.StatusInternalServerError, false, err.Error(), nil)
 		return
 	}
@@ -150,7 +151,7 @@ func (s *restServer) handleLogout(w http.ResponseWriter, r *http.Request) {
 	util.WriteJSONResponse(w, http.StatusOK, true, "Logged out successfully", nil)
 }
 
-func (s *restServer) handleRefreshToken(w http.ResponseWriter, r *http.Request) {
+func (s *restServer) HandleRefreshToken(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		return
@@ -162,7 +163,13 @@ func (s *restServer) handleRefreshToken(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	response, err := s.service.RefreshToken(r.Context(), req.RefreshToken)
+	dInfo, err := util.ExtractDeviceInfo(r)
+	if err != nil {
+		util.WriteJSONResponse(w, http.StatusBadRequest, false, err.Error(), nil)
+		return
+	}
+
+	response, err := s.service.RefreshToken(r.Context(), req.RefreshToken, dInfo.DeviceID)
 	if err != nil {
 		util.WriteJSONResponse(w, http.StatusUnauthorized, false, err.Error(), nil)
 		return

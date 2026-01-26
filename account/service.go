@@ -15,8 +15,8 @@ type Service interface {
 	ListAccounts(ctx context.Context, skip uint, take uint) ([]*Account, error)
 	CheckEmailExists(ctx context.Context, email string) (bool, error)
 	Login(ctx context.Context, email string, password string, deviceID string, deviceInfo *DeviceInfo) (*AuthenticatedResponse, error)
-	Logout(ctx context.Context, accessToken string) error
-	RefreshToken(ctx context.Context, refreshToken string) (*AuthenticatedResponse, error)
+	Logout(ctx context.Context, accessToken string, deviceID string) error
+	RefreshToken(ctx context.Context, refreshToken string, deviceID string) (*AuthenticatedResponse, error)
 }
 
 type AccountService struct {
@@ -143,19 +143,46 @@ func (service *AccountService) Login(ctx context.Context, email string, password
 	}, nil
 }
 
-func (service *AccountService) Logout(ctx context.Context, accessToken string) error {
+func (service *AccountService) Logout(ctx context.Context, accessToken string, deviceID string) error {
+	// 1. Validate Access Token
+	_, err := util.ValidateToken(accessToken, service.jwtSecret)
+	if err != nil {
+		return errors.New("invalid or expired access token")
+	}
+
+	// 2. Fetch session and check device
+	session, err := service.repository.GetSessionByAccessToken(ctx, accessToken)
+	if err != nil {
+		return errors.New("session not found")
+	}
+
+	if session.DeviceID != deviceID {
+		return errors.New("device mismatch")
+	}
+
 	return service.repository.RevokeSessionByAccessToken(ctx, accessToken)
 }
 
-func (service *AccountService) RefreshToken(ctx context.Context, refreshToken string) (*AuthenticatedResponse, error) {
+func (service *AccountService) RefreshToken(ctx context.Context, refreshToken string, deviceID string) (*AuthenticatedResponse, error) {
+	// 1. Validate Refresh Token
+	_, err := util.ValidateToken(refreshToken, service.jwtSecret)
+	if err != nil {
+		return nil, errors.New("invalid or expired refresh token")
+	}
+
+	// 2. Fetch session and check device
 	session, err := service.repository.GetSessionByRefreshToken(ctx, refreshToken)
 	if err != nil {
 		return nil, errors.New("invalid or expired refresh token")
 	}
 
+	if session.DeviceID != deviceID {
+		return nil, errors.New("device mismatch")
+	}
+
 	if session.ExpiresAt.Before(time.Now()) {
 		session.IsRevoked = true
-		_ = service.repository.UpdateSession(ctx, session)
+		_ = service.repository.CreateOrUpdateSession(ctx, session)
 		return nil, errors.New("refresh token expired")
 	}
 
@@ -178,7 +205,7 @@ func (service *AccountService) RefreshToken(ctx context.Context, refreshToken st
 	session.RefreshToken = newRefreshToken
 	session.ExpiresAt = time.Now().Add(service.refreshTokenExpiry)
 
-	if err := service.repository.UpdateSession(ctx, session); err != nil {
+	if err := service.repository.CreateOrUpdateSession(ctx, session); err != nil {
 		return nil, err
 	}
 

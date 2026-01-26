@@ -21,7 +21,7 @@ type Repository interface {
 	CreateOrUpdateSession(ctx context.Context, session *Session) error
 	GetSession(ctx context.Context, id string) (*Session, error)
 	GetSessionByRefreshToken(ctx context.Context, refreshToken string) (*Session, error)
-	UpdateSession(ctx context.Context, session *Session) error
+	GetSessionByAccessToken(ctx context.Context, accessToken string) (*Session, error)
 	RevokeSessionByAccessToken(ctx context.Context, accessToken string) error
 
 	// Device Info
@@ -174,14 +174,14 @@ func (repository *PostgresRepository) CreateOrUpdateSession(ctx context.Context,
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 		ON CONFLICT (account_id, device_id) 
 		DO UPDATE SET 
-			id = $1,
-			access_token = $4,
-			refresh_token = $5,
-			expires_at = $6,
-			is_revoked = $8
+			access_token = EXCLUDED.access_token,
+			refresh_token = EXCLUDED.refresh_token,
+			expires_at = EXCLUDED.expires_at,
+			is_revoked = EXCLUDED.is_revoked
+		RETURNING id
 	`
 
-	_, err := repository.db.ExecContext(ctx, query,
+	err := repository.db.QueryRowContext(ctx, query,
 		session.ID,
 		session.AccountID,
 		session.DeviceID,
@@ -190,7 +190,7 @@ func (repository *PostgresRepository) CreateOrUpdateSession(ctx context.Context,
 		session.ExpiresAt,
 		session.CreatedAt,
 		session.IsRevoked,
-	)
+	).Scan(&session.ID)
 
 	repository.logger.Database().Debug().
 		Str("query", query).
@@ -241,25 +241,24 @@ func (repository *PostgresRepository) GetSessionByRefreshToken(ctx context.Conte
 	return session, nil
 }
 
-func (repository *PostgresRepository) UpdateSession(ctx context.Context, session *Session) error {
+func (repository *PostgresRepository) GetSessionByAccessToken(ctx context.Context, accessToken string) (*Session, error) {
 	start := time.Now()
-	query := "UPDATE sessions SET access_token = $1, refresh_token = $2, expires_at = $3, is_revoked = $4 WHERE id = $5"
+	query := "SELECT id, account_id, device_id, access_token, refresh_token, expires_at, created_at, is_revoked FROM sessions WHERE access_token = $1"
 
-	_, err := repository.db.ExecContext(ctx, query,
-		session.AccessToken,
-		session.RefreshToken,
-		session.ExpiresAt,
-		session.IsRevoked,
-		session.ID,
-	)
+	row := repository.db.QueryRowContext(ctx, query, accessToken)
+	session := &Session{}
+	err := row.Scan(&session.ID, &session.AccountID, &session.DeviceID, &session.AccessToken, &session.RefreshToken, &session.ExpiresAt, &session.CreatedAt, &session.IsRevoked)
 
 	repository.logger.Database().Debug().
 		Str("query", query).
 		Str("duration", time.Since(start).String()).
 		Bool("success", err == nil).
-		Msg("Execute Query")
+		Msg("Query Row")
 
-	return err
+	if err != nil {
+		return nil, err
+	}
+	return session, nil
 }
 
 func (repository *PostgresRepository) RevokeSessionByAccessToken(ctx context.Context, accessToken string) error {
@@ -284,12 +283,12 @@ func (repository *PostgresRepository) CreateOrUpdateDeviceInfo(ctx context.Conte
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 		ON CONFLICT (session_id) 
 		DO UPDATE SET 
-			device_type = $3,
-			device_model = $4,
-			device_os = $5,
-			device_os_version = $6,
-			ip_address = $7,
-			user_agent = $8
+			device_type = EXCLUDED.device_type,
+			device_model = EXCLUDED.device_model,
+			device_os = EXCLUDED.device_os,
+			device_os_version = EXCLUDED.device_os_version,
+			ip_address = EXCLUDED.ip_address,
+			user_agent = EXCLUDED.user_agent
 	`
 
 	_, err := repository.db.ExecContext(ctx, query,

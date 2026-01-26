@@ -13,11 +13,11 @@ func NewRestHandler(service Service, logger util.Logger) http.Handler {
 	}
 
 	mux := http.NewServeMux()
-	mux.HandleFunc("/health", server.handleHealth)
-	mux.HandleFunc("/accounts/check-email", server.handleCheckEmail)
-	mux.HandleFunc("/accounts/login", server.handleLogin)
-	mux.HandleFunc("/accounts/logout", server.handleLogout)
-	mux.HandleFunc("/accounts/refresh", server.handleRefreshToken)
+	mux.HandleFunc("/health", server.HealthCheck)
+	mux.HandleFunc("/accounts/check-email", server.HandleCheckEmail)
+	mux.HandleFunc("/accounts/login", server.HandleLogin)
+	mux.HandleFunc("/accounts/logout", server.HandleLogout)
+	mux.HandleFunc("/accounts/refresh", server.HandleRefreshToken)
 
 	return mux
 }

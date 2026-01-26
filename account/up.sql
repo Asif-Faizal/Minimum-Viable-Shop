@@ -34,7 +34,7 @@ CREATE TABLE IF NOT EXISTS device_info (
     ip_address VARCHAR(255) NOT NULL,
     user_agent TEXT,
     created_at TIMESTAMP NOT NULL,
-    FOREIGN KEY (session_id) REFERENCES sessions(id)
+    FOREIGN KEY (session_id) REFERENCES sessions(id) ON DELETE CASCADE
 );
 
 -- Active Refresh Token lookup (for Token Refresh)
