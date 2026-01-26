@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 
+	"github.com/Asif-Faizal/Minimum-Viable-Shop/util"
 	"github.com/olivere/elastic/v7"
 )
 
@@ -18,14 +19,15 @@ type Repository interface {
 
 type ElasticRepository struct {
 	client *elastic.Client
+	logger util.Logger
 }
 
-func NewElasticRepository(url string) (Repository, error) {
+func NewElasticRepository(url string, logger util.Logger) (Repository, error) {
 	client, err := elastic.NewClient(elastic.SetURL(url), elastic.SetSniff(false))
 	if err != nil {
 		return nil, err
 	}
-	return &ElasticRepository{client: client}, nil
+	return &ElasticRepository{client: client, logger: logger}, nil
 }
 
 func (repository *ElasticRepository) Close() {

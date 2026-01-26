@@ -16,16 +16,16 @@ import (
 
 type GrpcServer struct {
 	accountService Service
-	logger         Logger
+	logger         util.Logger
 	pb.UnimplementedAccountServiceServer
 }
 
 type restServer struct {
 	service Service
-	logger  Logger
+	logger  util.Logger
 }
 
-func ListenGrpcServer(service Service, logger Logger, port int) error {
+func ListenGrpcServer(service Service, logger util.Logger, port int) error {
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
 	if err != nil {
 		return err
@@ -33,7 +33,7 @@ func ListenGrpcServer(service Service, logger Logger, port int) error {
 
 	grpcServer := grpc.NewServer(
 		grpc.UnaryInterceptor(grpc_middleware.ChainUnaryServer(
-			UnaryServerInterceptor(logger),
+			util.UnaryServerInterceptor(logger),
 		)),
 	)
 
@@ -48,7 +48,7 @@ func ListenGrpcServer(service Service, logger Logger, port int) error {
 	return grpcServer.Serve(lis)
 }
 
-func ListenRestServer(service Service, logger Logger, port int) error {
+func ListenRestServer(service Service, logger util.Logger, port int) error {
 	addr := fmt.Sprintf(":%d", port)
 	server := &restServer{
 		service: service,

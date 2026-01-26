@@ -8,6 +8,8 @@ import (
 	"github.com/Asif-Faizal/Minimum-Viable-Shop/account"
 	"github.com/Asif-Faizal/Minimum-Viable-Shop/catalog"
 	"github.com/Asif-Faizal/Minimum-Viable-Shop/order/pb/pb"
+	"github.com/Asif-Faizal/Minimum-Viable-Shop/util"
+	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -17,10 +19,11 @@ type GrpcServer struct {
 	orderService  Service
 	accountClient *account.AccountClient
 	catalogClient *catalog.CatalogClient
+	logger        util.Logger
 	pb.UnimplementedOrderServiceServer
 }
 
-func ListenGrpcServer(service Service, accountUrl string, catalogUrl string, port int) error {
+func ListenGrpcServer(service Service, accountUrl string, catalogUrl string, logger util.Logger, port int) error {
 	accountClient, err := account.NewAccountClient(accountUrl)
 	if err != nil {
 		return err
@@ -30,8 +33,17 @@ func ListenGrpcServer(service Service, accountUrl string, catalogUrl string, por
 		accountClient.Close()
 		return err
 	}
-	grpcServer := grpc.NewServer()
-	server := &GrpcServer{orderService: service, accountClient: accountClient, catalogClient: catalogClient}
+	grpcServer := grpc.NewServer(
+		grpc.UnaryInterceptor(grpc_middleware.ChainUnaryServer(
+			util.UnaryServerInterceptor(logger),
+		)),
+	)
+	server := &GrpcServer{
+		orderService:  service,
+		accountClient: accountClient,
+		catalogClient: catalogClient,
+		logger:        logger,
+	}
 	pb.RegisterOrderServiceServer(grpcServer, server)
 	reflection.Register(grpcServer)
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", port))

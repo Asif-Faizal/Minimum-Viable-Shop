@@ -6,22 +6,29 @@ import (
 	"net"
 
 	pb "github.com/Asif-Faizal/Minimum-Viable-Shop/catalog/pb"
+	"github.com/Asif-Faizal/Minimum-Viable-Shop/util"
+	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 )
 
 type GrpcServer struct {
 	catalogService Service
+	logger         util.Logger
 	pb.UnimplementedCatalogServiceServer
 }
 
-func ListenGrpcServer(service Service, port int) error {
+func ListenGrpcServer(service Service, logger util.Logger, port int) error {
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
 	if err != nil {
 		return err
 	}
-	grpcServer := grpc.NewServer()
-	server := &GrpcServer{catalogService: service}
+	grpcServer := grpc.NewServer(
+		grpc.UnaryInterceptor(grpc_middleware.ChainUnaryServer(
+			util.UnaryServerInterceptor(logger),
+		)),
+	)
+	server := &GrpcServer{catalogService: service, logger: logger}
 	pb.RegisterCatalogServiceServer(grpcServer, server)
 	reflection.Register(grpcServer)
 	return grpcServer.Serve(lis)

@@ -4,6 +4,8 @@ import (
 	"context"
 	"database/sql"
 	"time"
+
+	"github.com/Asif-Faizal/Minimum-Viable-Shop/util"
 )
 
 type Repository interface {
@@ -14,10 +16,11 @@ type Repository interface {
 }
 
 type PostgresRepository struct {
-	db *sql.DB
+	db     *sql.DB
+	logger util.Logger
 }
 
-func NewPostgresRepository(url string) (Repository, error) {
+func NewPostgresRepository(url string, logger util.Logger) (Repository, error) {
 	db, err := sql.Open("postgres", url)
 	if err != nil {
 		return nil, err
@@ -26,7 +29,7 @@ func NewPostgresRepository(url string) (Repository, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &PostgresRepository{db}, nil
+	return &PostgresRepository{db, logger}, nil
 }
 
 func (repository *PostgresRepository) Close() {

@@ -11,6 +11,7 @@ RUN go mod download
 
 # Copy source code
 COPY graphql ./graphql
+COPY util ./util
 COPY account ./account
 COPY catalog ./catalog
 COPY order ./order

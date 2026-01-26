@@ -11,6 +11,7 @@ RUN go mod download
 
 # Copy source code
 COPY catalog ./catalog
+COPY util ./util
 
 # Build the application
 RUN CGO_ENABLED=0 GOOS=linux go build -o /build/catalog-server ./catalog/cmd/catalog

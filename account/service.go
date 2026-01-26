@@ -3,8 +3,8 @@ package account
 import (
 	"context"
 
+	"github.com/Asif-Faizal/Minimum-Viable-Shop/util"
 	"github.com/segmentio/ksuid"
-	"golang.org/x/crypto/bcrypt"
 )
 
 type Service interface {
@@ -29,11 +29,11 @@ func (service *AccountService) CreateOrUpdateAccount(ctx context.Context, accoun
 	}
 	hashed := ""
 	if account.Password != "" {
-		b, err := bcrypt.GenerateFromPassword([]byte(account.Password), bcrypt.DefaultCost)
+		hash, err := util.HashPassword(account.Password)
 		if err != nil {
 			return nil, err
 		}
-		hashed = string(b)
+		hashed = hash
 	}
 	newAccount := &Account{
 		ID:       id,

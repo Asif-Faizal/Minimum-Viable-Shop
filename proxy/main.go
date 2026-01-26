@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Asif-Faizal/Minimum-Viable-Shop/util"
 	"github.com/kelseyhightower/envconfig"
 )
 
@@ -20,6 +21,7 @@ type Config struct {
 	IdleConnTimeout     time.Duration `envconfig:"PROXY_IDLE_CONN_TIMEOUT" default:"90s"`
 	RequestTimeout      time.Duration `envconfig:"PROXY_REQUEST_TIMEOUT" default:"30s"`
 	Port                int           `envconfig:"PROXY_PORT" default:"80"`
+	LogLevel            string        `envconfig:"LOG_LEVEL" default:"info"`
 }
 
 func main() {
@@ -27,19 +29,26 @@ func main() {
 	if err := envconfig.Process("", &cfg); err != nil {
 		log.Fatalf("[PROXY] Failed to process config: %v", err)
 	}
+	logger := util.NewLogger(cfg.LogLevel)
 
-	log.Printf("[PROXY] Starting with config: AccountServiceURL=%s, GraphQLGatewayURL=%s, MaxIdleConns=%d, MaxIdleConnsPerHost=%d, IdleConnTimeout=%v, RequestTimeout=%v",
-		cfg.AccountServiceURL, cfg.GraphQLGatewayURL, cfg.MaxIdleConns, cfg.MaxIdleConnsPerHost, cfg.IdleConnTimeout, cfg.RequestTimeout)
+	logger.Service().Info().
+		Str("AccountServiceURL", cfg.AccountServiceURL).
+		Str("GraphQLGatewayURL", cfg.GraphQLGatewayURL).
+		Int("MaxIdleConns", cfg.MaxIdleConns).
+		Int("MaxIdleConnsPerHost", cfg.MaxIdleConnsPerHost).
+		Dur("IdleConnTimeout", cfg.IdleConnTimeout).
+		Dur("RequestTimeout", cfg.RequestTimeout).
+		Msg("Proxy Starting")
 
 	// Parse upstream targets
 	authTarget, err := url.Parse(cfg.AccountServiceURL)
 	if err != nil {
-		log.Fatalf("[PROXY] Failed to parse account URL: %v", err)
+		logger.Service().Fatal().Err(err).Msg("Failed to parse account URL")
 	}
 
 	gqlTarget, err := url.Parse(cfg.GraphQLGatewayURL)
 	if err != nil {
-		log.Fatalf("[PROXY] Failed to parse graphql URL: %v", err)
+		logger.Service().Fatal().Err(err).Msg("Failed to parse graphql URL")
 	}
 
 	// Configure transport with connection pooling
@@ -52,16 +61,22 @@ func main() {
 	// Create reverse proxies
 	authProxy := httputil.NewSingleHostReverseProxy(authTarget)
 	authProxy.Transport = transport
-	authProxy.ErrorHandler = errorHandler
+	authProxy.ErrorHandler = func(w http.ResponseWriter, r *http.Request, err error) {
+		logger.Transport().Error().Err(err).Str("method", r.Method).Str("path", r.URL.Path).Msg("Proxy Error")
+		http.Error(w, "Service temporarily unavailable", http.StatusServiceUnavailable)
+	}
 
 	gqlProxy := httputil.NewSingleHostReverseProxy(gqlTarget)
 	gqlProxy.Transport = transport
-	gqlProxy.ErrorHandler = errorHandler
+	gqlProxy.ErrorHandler = func(w http.ResponseWriter, r *http.Request, err error) {
+		logger.Transport().Error().Err(err).Str("method", r.Method).Str("path", r.URL.Path).Msg("Proxy Error")
+		http.Error(w, "Service temporarily unavailable", http.StatusServiceUnavailable)
+	}
 
 	// Route handler
 	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Log incoming request
-		log.Printf("[PROXY] %s %s", r.Method, r.URL.Path)
+		logger.Transport().Info().Str("method", r.Method).Str("path", r.URL.Path).Msg("Proxying request")
 
 		// Route based on path
 		if strings.HasPrefix(r.URL.Path, "/auth") {
@@ -77,11 +92,6 @@ func main() {
 	timeoutHandler := http.TimeoutHandler(handler, cfg.RequestTimeout, "Request timeout")
 
 	addr := fmt.Sprintf(":%d", cfg.Port)
-	log.Printf("[PROXY] Starting reverse proxy on %s", addr)
-	log.Fatal(http.ListenAndServe(addr, timeoutHandler))
-}
-
-func errorHandler(w http.ResponseWriter, r *http.Request, err error) {
-	log.Printf("[PROXY ERROR] %s %s: %v", r.Method, r.URL.Path, err)
-	http.Error(w, "Service temporarily unavailable", http.StatusServiceUnavailable)
+	logger.Service().Info().Str("addr", addr).Msg("Starting reverse proxy")
+	logger.Service().Fatal().Err(http.ListenAndServe(addr, timeoutHandler)).Msg("Proxy exit")
 }

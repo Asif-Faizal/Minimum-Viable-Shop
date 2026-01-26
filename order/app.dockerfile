@@ -11,6 +11,7 @@ RUN go mod download
 
 # Copy source code
 COPY order ./order
+COPY util ./util
 COPY account ./account
 COPY catalog ./catalog
 

@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"time"
 
+	"github.com/Asif-Faizal/Minimum-Viable-Shop/util"
 	_ "github.com/lib/pq"
 )
 
@@ -18,10 +19,10 @@ type Repository interface {
 
 type PostgresRepository struct {
 	db     *sql.DB
-	logger Logger
+	logger util.Logger
 }
 
-func NewPostgresRepository(url string, logger Logger) (Repository, error) {
+func NewPostgresRepository(url string, logger util.Logger) (Repository, error) {
 	db, err := sql.Open("postgres", url)
 	if err != nil {
 		return nil, err

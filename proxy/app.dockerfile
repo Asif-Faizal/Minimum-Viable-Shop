@@ -6,8 +6,9 @@ WORKDIR /build
 COPY go.mod go.sum* ./
 RUN go mod download || true
 
-# Copy proxy source
-COPY proxy/main.go ./proxy/
+# Copy source code
+COPY proxy ./proxy
+COPY util ./util
 
 # Build
 RUN CGO_ENABLED=0 GOOS=linux go build -o /build/proxy-server ./proxy/main.go

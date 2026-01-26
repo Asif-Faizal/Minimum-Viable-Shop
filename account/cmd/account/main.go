@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/Asif-Faizal/Minimum-Viable-Shop/account"
+	"github.com/Asif-Faizal/Minimum-Viable-Shop/util"
 	"github.com/kelseyhightower/envconfig"
 	"github.com/tinrab/retry"
 )
@@ -23,7 +24,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	logger := account.NewLogger(config.LogLevel)
+	logger := util.NewLogger(config.LogLevel)
 
 	var repository account.Repository
 	retry.ForeverSleep(2*time.Second, func(_ int) (err error) {
