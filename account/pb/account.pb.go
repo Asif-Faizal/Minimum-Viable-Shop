@@ -475,6 +475,118 @@ func (x *CheckEmailExistsResponse) GetExists() bool {
 	return false
 }
 
+type LoginRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Email         string                 `protobuf:"bytes,1,opt,name=email,proto3" json:"email,omitempty"`
+	Password      string                 `protobuf:"bytes,2,opt,name=password,proto3" json:"password,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *LoginRequest) Reset() {
+	*x = LoginRequest{}
+	mi := &file_account_proto_msgTypes[9]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *LoginRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*LoginRequest) ProtoMessage() {}
+
+func (x *LoginRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_account_proto_msgTypes[9]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use LoginRequest.ProtoReflect.Descriptor instead.
+func (*LoginRequest) Descriptor() ([]byte, []int) {
+	return file_account_proto_rawDescGZIP(), []int{9}
+}
+
+func (x *LoginRequest) GetEmail() string {
+	if x != nil {
+		return x.Email
+	}
+	return ""
+}
+
+func (x *LoginRequest) GetPassword() string {
+	if x != nil {
+		return x.Password
+	}
+	return ""
+}
+
+type LoginResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	AccessToken   string                 `protobuf:"bytes,1,opt,name=access_token,json=accessToken,proto3" json:"access_token,omitempty"`
+	RefreshToken  string                 `protobuf:"bytes,2,opt,name=refresh_token,json=refreshToken,proto3" json:"refresh_token,omitempty"`
+	Account       *Account               `protobuf:"bytes,3,opt,name=account,proto3" json:"account,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *LoginResponse) Reset() {
+	*x = LoginResponse{}
+	mi := &file_account_proto_msgTypes[10]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *LoginResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*LoginResponse) ProtoMessage() {}
+
+func (x *LoginResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_account_proto_msgTypes[10]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use LoginResponse.ProtoReflect.Descriptor instead.
+func (*LoginResponse) Descriptor() ([]byte, []int) {
+	return file_account_proto_rawDescGZIP(), []int{10}
+}
+
+func (x *LoginResponse) GetAccessToken() string {
+	if x != nil {
+		return x.AccessToken
+	}
+	return ""
+}
+
+func (x *LoginResponse) GetRefreshToken() string {
+	if x != nil {
+		return x.RefreshToken
+	}
+	return ""
+}
+
+func (x *LoginResponse) GetAccount() *Account {
+	if x != nil {
+		return x.Account
+	}
+	return nil
+}
+
 var File_account_proto protoreflect.FileDescriptor
 
 const file_account_proto_rawDesc = "" +
@@ -504,12 +616,20 @@ const file_account_proto_rawDesc = "" +
 	"\x17CheckEmailExistsRequest\x12\x14\n" +
 	"\x05email\x18\x01 \x01(\tR\x05email\"2\n" +
 	"\x18CheckEmailExistsResponse\x12\x16\n" +
-	"\x06exists\x18\x01 \x01(\bR\x06exists2\xc9\x02\n" +
+	"\x06exists\x18\x01 \x01(\bR\x06exists\"@\n" +
+	"\fLoginRequest\x12\x14\n" +
+	"\x05email\x18\x01 \x01(\tR\x05email\x12\x1a\n" +
+	"\bpassword\x18\x02 \x01(\tR\bpassword\"~\n" +
+	"\rLoginResponse\x12!\n" +
+	"\faccess_token\x18\x01 \x01(\tR\vaccessToken\x12#\n" +
+	"\rrefresh_token\x18\x02 \x01(\tR\frefreshToken\x12%\n" +
+	"\aaccount\x18\x03 \x01(\v2\v.pb.AccountR\aaccount2\xf7\x02\n" +
 	"\x0eAccountService\x12\\\n" +
 	"\x15CreateOrUpdateAccount\x12 .pb.CreateOrUpdateAccountRequest\x1a!.pb.CreateOrUpdateAccountResponse\x12G\n" +
 	"\x0eGetAccountByID\x12\x19.pb.GetAccountByIDRequest\x1a\x1a.pb.GetAccountByIDResponse\x12A\n" +
 	"\fListAccounts\x12\x17.pb.ListAccountsRequest\x1a\x18.pb.ListAccountsResponse\x12M\n" +
-	"\x10CheckEmailExists\x12\x1b.pb.CheckEmailExistsRequest\x1a\x1c.pb.CheckEmailExistsResponseB\x04Z\x02./b\x06proto3"
+	"\x10CheckEmailExists\x12\x1b.pb.CheckEmailExistsRequest\x1a\x1c.pb.CheckEmailExistsResponse\x12,\n" +
+	"\x05Login\x12\x10.pb.LoginRequest\x1a\x11.pb.LoginResponseB\x04Z\x02./b\x06proto3"
 
 var (
 	file_account_proto_rawDescOnce sync.Once
@@ -523,7 +643,7 @@ func file_account_proto_rawDescGZIP() []byte {
 	return file_account_proto_rawDescData
 }
 
-var file_account_proto_msgTypes = make([]protoimpl.MessageInfo, 9)
+var file_account_proto_msgTypes = make([]protoimpl.MessageInfo, 11)
 var file_account_proto_goTypes = []any{
 	(*Account)(nil),                       // 0: pb.Account
 	(*CreateOrUpdateAccountRequest)(nil),  // 1: pb.CreateOrUpdateAccountRequest
@@ -534,24 +654,29 @@ var file_account_proto_goTypes = []any{
 	(*ListAccountsResponse)(nil),          // 6: pb.ListAccountsResponse
 	(*CheckEmailExistsRequest)(nil),       // 7: pb.CheckEmailExistsRequest
 	(*CheckEmailExistsResponse)(nil),      // 8: pb.CheckEmailExistsResponse
+	(*LoginRequest)(nil),                  // 9: pb.LoginRequest
+	(*LoginResponse)(nil),                 // 10: pb.LoginResponse
 }
 var file_account_proto_depIdxs = []int32{
-	0, // 0: pb.CreateOrUpdateAccountResponse.account:type_name -> pb.Account
-	0, // 1: pb.GetAccountByIDResponse.account:type_name -> pb.Account
-	0, // 2: pb.ListAccountsResponse.accounts:type_name -> pb.Account
-	1, // 3: pb.AccountService.CreateOrUpdateAccount:input_type -> pb.CreateOrUpdateAccountRequest
-	3, // 4: pb.AccountService.GetAccountByID:input_type -> pb.GetAccountByIDRequest
-	5, // 5: pb.AccountService.ListAccounts:input_type -> pb.ListAccountsRequest
-	7, // 6: pb.AccountService.CheckEmailExists:input_type -> pb.CheckEmailExistsRequest
-	2, // 7: pb.AccountService.CreateOrUpdateAccount:output_type -> pb.CreateOrUpdateAccountResponse
-	4, // 8: pb.AccountService.GetAccountByID:output_type -> pb.GetAccountByIDResponse
-	6, // 9: pb.AccountService.ListAccounts:output_type -> pb.ListAccountsResponse
-	8, // 10: pb.AccountService.CheckEmailExists:output_type -> pb.CheckEmailExistsResponse
-	7, // [7:11] is the sub-list for method output_type
-	3, // [3:7] is the sub-list for method input_type
-	3, // [3:3] is the sub-list for extension type_name
-	3, // [3:3] is the sub-list for extension extendee
-	0, // [0:3] is the sub-list for field type_name
+	0,  // 0: pb.CreateOrUpdateAccountResponse.account:type_name -> pb.Account
+	0,  // 1: pb.GetAccountByIDResponse.account:type_name -> pb.Account
+	0,  // 2: pb.ListAccountsResponse.accounts:type_name -> pb.Account
+	0,  // 3: pb.LoginResponse.account:type_name -> pb.Account
+	1,  // 4: pb.AccountService.CreateOrUpdateAccount:input_type -> pb.CreateOrUpdateAccountRequest
+	3,  // 5: pb.AccountService.GetAccountByID:input_type -> pb.GetAccountByIDRequest
+	5,  // 6: pb.AccountService.ListAccounts:input_type -> pb.ListAccountsRequest
+	7,  // 7: pb.AccountService.CheckEmailExists:input_type -> pb.CheckEmailExistsRequest
+	9,  // 8: pb.AccountService.Login:input_type -> pb.LoginRequest
+	2,  // 9: pb.AccountService.CreateOrUpdateAccount:output_type -> pb.CreateOrUpdateAccountResponse
+	4,  // 10: pb.AccountService.GetAccountByID:output_type -> pb.GetAccountByIDResponse
+	6,  // 11: pb.AccountService.ListAccounts:output_type -> pb.ListAccountsResponse
+	8,  // 12: pb.AccountService.CheckEmailExists:output_type -> pb.CheckEmailExistsResponse
+	10, // 13: pb.AccountService.Login:output_type -> pb.LoginResponse
+	9,  // [9:14] is the sub-list for method output_type
+	4,  // [4:9] is the sub-list for method input_type
+	4,  // [4:4] is the sub-list for extension type_name
+	4,  // [4:4] is the sub-list for extension extendee
+	0,  // [0:4] is the sub-list for field type_name
 }
 
 func init() { file_account_proto_init() }
@@ -565,7 +690,7 @@ func file_account_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_account_proto_rawDesc), len(file_account_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   9,
+			NumMessages:   11,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

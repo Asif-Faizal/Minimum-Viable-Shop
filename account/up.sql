@@ -16,10 +16,16 @@ CREATE TABLE IF NOT EXISTS sessions (
     FOREIGN KEY (account_id) REFERENCES accounts(id)
 );
 
+DO $$ BEGIN
+    CREATE TYPE device_type_enum AS ENUM ('mobile', 'desktop', 'other');
+EXCEPTION
+    WHEN duplicate_object THEN null;
+END $$;
+
 CREATE TABLE IF NOT EXISTS device_info (
     id CHAR(27) PRIMARY KEY,
     session_id CHAR(27) NOT NULL,
-    device_type enum('mobile', 'desktop', 'other') NOT NULL,
+    device_type device_type_enum NOT NULL,
     device_model VARCHAR(255) NOT NULL,
     device_os VARCHAR(255) NOT NULL,
     device_os_version VARCHAR(255),

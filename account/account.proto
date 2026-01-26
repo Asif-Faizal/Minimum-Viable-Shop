@@ -48,9 +48,21 @@ message CheckEmailExistsResponse {
   bool exists = 1;
 }
 
+message LoginRequest {
+  string email = 1;
+  string password = 2;
+}
+
+message LoginResponse {
+  string access_token = 1;
+  string refresh_token = 2;
+  Account account = 3;
+}
+
 service AccountService {
   rpc CreateOrUpdateAccount(CreateOrUpdateAccountRequest) returns (CreateOrUpdateAccountResponse);
   rpc GetAccountByID(GetAccountByIDRequest) returns (GetAccountByIDResponse);
   rpc ListAccounts(ListAccountsRequest) returns (ListAccountsResponse);
   rpc CheckEmailExists(CheckEmailExistsRequest) returns (CheckEmailExistsResponse);
+  rpc Login(LoginRequest) returns (LoginResponse);
 }

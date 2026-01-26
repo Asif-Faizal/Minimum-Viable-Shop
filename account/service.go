@@ -18,14 +18,23 @@ type Service interface {
 }
 
 type AccountService struct {
-	repository Repository
-	jwtSecret  string
+	repository         Repository
+	jwtSecret          string
+	accessTokenExpiry  time.Duration
+	refreshTokenExpiry time.Duration
 }
 
-func NewAccountService(repository Repository, jwtSecret string) *AccountService {
+func NewAccountService(
+	repository Repository,
+	jwtSecret string,
+	accessTokenExpiry time.Duration,
+	refreshTokenExpiry time.Duration,
+) *AccountService {
 	return &AccountService{
-		repository: repository,
-		jwtSecret:  jwtSecret,
+		repository:         repository,
+		jwtSecret:          jwtSecret,
+		accessTokenExpiry:  accessTokenExpiry,
+		refreshTokenExpiry: refreshTokenExpiry,
 	}
 }
 
@@ -91,7 +100,7 @@ func (service *AccountService) Login(ctx context.Context, email string, password
 		return nil, errors.New("invalid email or password")
 	}
 
-	accessToken, err := util.GenerateToken(account.ID, account.Email, service.jwtSecret, 15*time.Minute)
+	accessToken, err := util.GenerateToken(account.ID, account.Email, service.jwtSecret, service.accessTokenExpiry)
 	if err != nil {
 		return nil, err
 	}
@@ -103,7 +112,7 @@ func (service *AccountService) Login(ctx context.Context, email string, password
 		AccountID:    account.ID,
 		AccessToken:  accessToken,
 		RefreshToken: refreshToken,
-		ExpiresAt:    time.Now().Add(7 * 24 * time.Hour),
+		ExpiresAt:    time.Now().Add(service.refreshTokenExpiry),
 		CreatedAt:    time.Now(),
 		IsRevoked:    false,
 	}

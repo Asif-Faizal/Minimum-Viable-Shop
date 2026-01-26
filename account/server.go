@@ -2,6 +2,7 @@ package account
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net"
 	"net/http"
@@ -58,6 +59,7 @@ func ListenRestServer(service Service, logger util.Logger, port int) error {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/health", server.handleHealth)
 	mux.HandleFunc("/accounts/check-email", server.handleCheckEmail)
+	mux.HandleFunc("/accounts/login", server.handleLogin)
 
 	return http.ListenAndServe(addr, mux)
 }
@@ -92,6 +94,27 @@ func (s *restServer) handleCheckEmail(w http.ResponseWriter, r *http.Request) {
 	util.WriteJSONResponse(w, http.StatusOK, true, message, map[string]bool{
 		"exists": exists,
 	})
+}
+
+func (s *restServer) handleLogin(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var req LoginRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		util.WriteJSONResponse(w, http.StatusBadRequest, false, "invalid request body", nil)
+		return
+	}
+
+	response, err := s.service.Login(r.Context(), req.Email, req.Password)
+	if err != nil {
+		util.WriteJSONResponse(w, http.StatusUnauthorized, false, err.Error(), nil)
+		return
+	}
+
+	util.WriteJSONResponse(w, http.StatusOK, true, "Login successful", response)
 }
 
 func (server *GrpcServer) CreateOrUpdateAccount(ctx context.Context, request *pb.CreateOrUpdateAccountRequest) (*pb.CreateOrUpdateAccountResponse, error) {
@@ -149,4 +172,20 @@ func (server *GrpcServer) CheckEmailExists(ctx context.Context, request *pb.Chec
 		return nil, err
 	}
 	return &pb.CheckEmailExistsResponse{Exists: exists}, nil
+}
+
+func (server *GrpcServer) Login(ctx context.Context, request *pb.LoginRequest) (*pb.LoginResponse, error) {
+	account, err := server.accountService.Login(ctx, request.Email, request.Password)
+	if err != nil {
+		return nil, err
+	}
+	return &pb.LoginResponse{
+		Account: &pb.Account{
+			Id:    account.Account.ID,
+			Name:  account.Account.Name,
+			Email: account.Account.Email,
+		},
+		AccessToken:  account.AccessToken,
+		RefreshToken: account.RefreshToken,
+	}, nil
 }

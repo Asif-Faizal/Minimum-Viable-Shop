@@ -25,6 +25,7 @@ const (
 	AccountService_GetAccountByID_FullMethodName        = "/pb.AccountService/GetAccountByID"
 	AccountService_ListAccounts_FullMethodName          = "/pb.AccountService/ListAccounts"
 	AccountService_CheckEmailExists_FullMethodName      = "/pb.AccountService/CheckEmailExists"
+	AccountService_Login_FullMethodName                 = "/pb.AccountService/Login"
 )
 
 // AccountServiceClient is the client API for AccountService service.
@@ -35,6 +36,7 @@ type AccountServiceClient interface {
 	GetAccountByID(ctx context.Context, in *GetAccountByIDRequest, opts ...grpc.CallOption) (*GetAccountByIDResponse, error)
 	ListAccounts(ctx context.Context, in *ListAccountsRequest, opts ...grpc.CallOption) (*ListAccountsResponse, error)
 	CheckEmailExists(ctx context.Context, in *CheckEmailExistsRequest, opts ...grpc.CallOption) (*CheckEmailExistsResponse, error)
+	Login(ctx context.Context, in *LoginRequest, opts ...grpc.CallOption) (*LoginResponse, error)
 }
 
 type accountServiceClient struct {
@@ -85,6 +87,16 @@ func (c *accountServiceClient) CheckEmailExists(ctx context.Context, in *CheckEm
 	return out, nil
 }
 
+func (c *accountServiceClient) Login(ctx context.Context, in *LoginRequest, opts ...grpc.CallOption) (*LoginResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(LoginResponse)
+	err := c.cc.Invoke(ctx, AccountService_Login_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // AccountServiceServer is the server API for AccountService service.
 // All implementations must embed UnimplementedAccountServiceServer
 // for forward compatibility.
@@ -93,6 +105,7 @@ type AccountServiceServer interface {
 	GetAccountByID(context.Context, *GetAccountByIDRequest) (*GetAccountByIDResponse, error)
 	ListAccounts(context.Context, *ListAccountsRequest) (*ListAccountsResponse, error)
 	CheckEmailExists(context.Context, *CheckEmailExistsRequest) (*CheckEmailExistsResponse, error)
+	Login(context.Context, *LoginRequest) (*LoginResponse, error)
 	mustEmbedUnimplementedAccountServiceServer()
 }
 
@@ -114,6 +127,9 @@ func (UnimplementedAccountServiceServer) ListAccounts(context.Context, *ListAcco
 }
 func (UnimplementedAccountServiceServer) CheckEmailExists(context.Context, *CheckEmailExistsRequest) (*CheckEmailExistsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method CheckEmailExists not implemented")
+}
+func (UnimplementedAccountServiceServer) Login(context.Context, *LoginRequest) (*LoginResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method Login not implemented")
 }
 func (UnimplementedAccountServiceServer) mustEmbedUnimplementedAccountServiceServer() {}
 func (UnimplementedAccountServiceServer) testEmbeddedByValue()                        {}
@@ -208,6 +224,24 @@ func _AccountService_CheckEmailExists_Handler(srv interface{}, ctx context.Conte
 	return interceptor(ctx, in, info, handler)
 }
 
+func _AccountService_Login_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(LoginRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AccountServiceServer).Login(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AccountService_Login_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AccountServiceServer).Login(ctx, req.(*LoginRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // AccountService_ServiceDesc is the grpc.ServiceDesc for AccountService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -230,6 +264,10 @@ var AccountService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "CheckEmailExists",
 			Handler:    _AccountService_CheckEmailExists_Handler,
+		},
+		{
+			MethodName: "Login",
+			Handler:    _AccountService_Login_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

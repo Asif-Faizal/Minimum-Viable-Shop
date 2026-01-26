@@ -11,11 +11,13 @@ import (
 )
 
 type Config struct {
-	DatabaseUrl string `envconfig:"DATABASE_URL"`
-	Port        int    `envconfig:"GRPC_PORT" default:"8080"`
-	RestPort    int    `envconfig:"REST_PORT" default:"8081"`
-	LogLevel    string `envconfig:"LOG_LEVEL" default:"info"`
-	JwtSecret   string `envconfig:"JWT_SECRET" default:"my-secret-key"`
+	DatabaseUrl        string        `envconfig:"DATABASE_URL"`
+	Port               int           `envconfig:"GRPC_PORT" default:"8080"`
+	RestPort           int           `envconfig:"REST_PORT" default:"8081"`
+	LogLevel           string        `envconfig:"LOG_LEVEL" default:"info"`
+	JwtSecret          string        `envconfig:"JWT_SECRET" default:"my-secret-key"`
+	AccessTokenExpiry  time.Duration `envconfig:"ACCESS_TOKEN_EXPIRY" default:"45m"`
+	RefreshTokenExpiry time.Duration `envconfig:"REFRESH_TOKEN_EXPIRY" default:"168h"`
 }
 
 func main() {
@@ -40,7 +42,12 @@ func main() {
 
 	logger.Service().Info().Msg("connected to database")
 
-	service := account.NewAccountService(repository, config.JwtSecret)
+	service := account.NewAccountService(
+		repository,
+		config.JwtSecret,
+		config.AccessTokenExpiry,
+		config.RefreshTokenExpiry,
+	)
 
 	// Start REST server for health check in a goroutine
 	go func() {
