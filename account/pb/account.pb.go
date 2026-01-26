@@ -387,6 +387,94 @@ func (x *ListAccountsResponse) GetAccounts() []*Account {
 	return nil
 }
 
+type CheckEmailExistsRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Email         string                 `protobuf:"bytes,1,opt,name=email,proto3" json:"email,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CheckEmailExistsRequest) Reset() {
+	*x = CheckEmailExistsRequest{}
+	mi := &file_account_proto_msgTypes[7]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CheckEmailExistsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CheckEmailExistsRequest) ProtoMessage() {}
+
+func (x *CheckEmailExistsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_account_proto_msgTypes[7]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CheckEmailExistsRequest.ProtoReflect.Descriptor instead.
+func (*CheckEmailExistsRequest) Descriptor() ([]byte, []int) {
+	return file_account_proto_rawDescGZIP(), []int{7}
+}
+
+func (x *CheckEmailExistsRequest) GetEmail() string {
+	if x != nil {
+		return x.Email
+	}
+	return ""
+}
+
+type CheckEmailExistsResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Exists        bool                   `protobuf:"varint,1,opt,name=exists,proto3" json:"exists,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CheckEmailExistsResponse) Reset() {
+	*x = CheckEmailExistsResponse{}
+	mi := &file_account_proto_msgTypes[8]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CheckEmailExistsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CheckEmailExistsResponse) ProtoMessage() {}
+
+func (x *CheckEmailExistsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_account_proto_msgTypes[8]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CheckEmailExistsResponse.ProtoReflect.Descriptor instead.
+func (*CheckEmailExistsResponse) Descriptor() ([]byte, []int) {
+	return file_account_proto_rawDescGZIP(), []int{8}
+}
+
+func (x *CheckEmailExistsResponse) GetExists() bool {
+	if x != nil {
+		return x.Exists
+	}
+	return false
+}
+
 var File_account_proto protoreflect.FileDescriptor
 
 const file_account_proto_rawDesc = "" +
@@ -412,11 +500,16 @@ const file_account_proto_rawDesc = "" +
 	"\x04skip\x18\x01 \x01(\rR\x04skip\x12\x12\n" +
 	"\x04take\x18\x02 \x01(\rR\x04take\"?\n" +
 	"\x14ListAccountsResponse\x12'\n" +
-	"\baccounts\x18\x01 \x03(\v2\v.pb.AccountR\baccounts2\xfa\x01\n" +
+	"\baccounts\x18\x01 \x03(\v2\v.pb.AccountR\baccounts\"/\n" +
+	"\x17CheckEmailExistsRequest\x12\x14\n" +
+	"\x05email\x18\x01 \x01(\tR\x05email\"2\n" +
+	"\x18CheckEmailExistsResponse\x12\x16\n" +
+	"\x06exists\x18\x01 \x01(\bR\x06exists2\xc9\x02\n" +
 	"\x0eAccountService\x12\\\n" +
 	"\x15CreateOrUpdateAccount\x12 .pb.CreateOrUpdateAccountRequest\x1a!.pb.CreateOrUpdateAccountResponse\x12G\n" +
 	"\x0eGetAccountByID\x12\x19.pb.GetAccountByIDRequest\x1a\x1a.pb.GetAccountByIDResponse\x12A\n" +
-	"\fListAccounts\x12\x17.pb.ListAccountsRequest\x1a\x18.pb.ListAccountsResponseB\x04Z\x02./b\x06proto3"
+	"\fListAccounts\x12\x17.pb.ListAccountsRequest\x1a\x18.pb.ListAccountsResponse\x12M\n" +
+	"\x10CheckEmailExists\x12\x1b.pb.CheckEmailExistsRequest\x1a\x1c.pb.CheckEmailExistsResponseB\x04Z\x02./b\x06proto3"
 
 var (
 	file_account_proto_rawDescOnce sync.Once
@@ -430,7 +523,7 @@ func file_account_proto_rawDescGZIP() []byte {
 	return file_account_proto_rawDescData
 }
 
-var file_account_proto_msgTypes = make([]protoimpl.MessageInfo, 7)
+var file_account_proto_msgTypes = make([]protoimpl.MessageInfo, 9)
 var file_account_proto_goTypes = []any{
 	(*Account)(nil),                       // 0: pb.Account
 	(*CreateOrUpdateAccountRequest)(nil),  // 1: pb.CreateOrUpdateAccountRequest
@@ -439,6 +532,8 @@ var file_account_proto_goTypes = []any{
 	(*GetAccountByIDResponse)(nil),        // 4: pb.GetAccountByIDResponse
 	(*ListAccountsRequest)(nil),           // 5: pb.ListAccountsRequest
 	(*ListAccountsResponse)(nil),          // 6: pb.ListAccountsResponse
+	(*CheckEmailExistsRequest)(nil),       // 7: pb.CheckEmailExistsRequest
+	(*CheckEmailExistsResponse)(nil),      // 8: pb.CheckEmailExistsResponse
 }
 var file_account_proto_depIdxs = []int32{
 	0, // 0: pb.CreateOrUpdateAccountResponse.account:type_name -> pb.Account
@@ -447,11 +542,13 @@ var file_account_proto_depIdxs = []int32{
 	1, // 3: pb.AccountService.CreateOrUpdateAccount:input_type -> pb.CreateOrUpdateAccountRequest
 	3, // 4: pb.AccountService.GetAccountByID:input_type -> pb.GetAccountByIDRequest
 	5, // 5: pb.AccountService.ListAccounts:input_type -> pb.ListAccountsRequest
-	2, // 6: pb.AccountService.CreateOrUpdateAccount:output_type -> pb.CreateOrUpdateAccountResponse
-	4, // 7: pb.AccountService.GetAccountByID:output_type -> pb.GetAccountByIDResponse
-	6, // 8: pb.AccountService.ListAccounts:output_type -> pb.ListAccountsResponse
-	6, // [6:9] is the sub-list for method output_type
-	3, // [3:6] is the sub-list for method input_type
+	7, // 6: pb.AccountService.CheckEmailExists:input_type -> pb.CheckEmailExistsRequest
+	2, // 7: pb.AccountService.CreateOrUpdateAccount:output_type -> pb.CreateOrUpdateAccountResponse
+	4, // 8: pb.AccountService.GetAccountByID:output_type -> pb.GetAccountByIDResponse
+	6, // 9: pb.AccountService.ListAccounts:output_type -> pb.ListAccountsResponse
+	8, // 10: pb.AccountService.CheckEmailExists:output_type -> pb.CheckEmailExistsResponse
+	7, // [7:11] is the sub-list for method output_type
+	3, // [3:7] is the sub-list for method input_type
 	3, // [3:3] is the sub-list for extension type_name
 	3, // [3:3] is the sub-list for extension extendee
 	0, // [0:3] is the sub-list for field type_name
@@ -468,7 +565,7 @@ func file_account_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_account_proto_rawDesc), len(file_account_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   7,
+			NumMessages:   9,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

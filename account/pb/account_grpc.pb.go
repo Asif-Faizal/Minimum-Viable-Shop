@@ -24,6 +24,7 @@ const (
 	AccountService_CreateOrUpdateAccount_FullMethodName = "/pb.AccountService/CreateOrUpdateAccount"
 	AccountService_GetAccountByID_FullMethodName        = "/pb.AccountService/GetAccountByID"
 	AccountService_ListAccounts_FullMethodName          = "/pb.AccountService/ListAccounts"
+	AccountService_CheckEmailExists_FullMethodName      = "/pb.AccountService/CheckEmailExists"
 )
 
 // AccountServiceClient is the client API for AccountService service.
@@ -33,6 +34,7 @@ type AccountServiceClient interface {
 	CreateOrUpdateAccount(ctx context.Context, in *CreateOrUpdateAccountRequest, opts ...grpc.CallOption) (*CreateOrUpdateAccountResponse, error)
 	GetAccountByID(ctx context.Context, in *GetAccountByIDRequest, opts ...grpc.CallOption) (*GetAccountByIDResponse, error)
 	ListAccounts(ctx context.Context, in *ListAccountsRequest, opts ...grpc.CallOption) (*ListAccountsResponse, error)
+	CheckEmailExists(ctx context.Context, in *CheckEmailExistsRequest, opts ...grpc.CallOption) (*CheckEmailExistsResponse, error)
 }
 
 type accountServiceClient struct {
@@ -73,6 +75,16 @@ func (c *accountServiceClient) ListAccounts(ctx context.Context, in *ListAccount
 	return out, nil
 }
 
+func (c *accountServiceClient) CheckEmailExists(ctx context.Context, in *CheckEmailExistsRequest, opts ...grpc.CallOption) (*CheckEmailExistsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(CheckEmailExistsResponse)
+	err := c.cc.Invoke(ctx, AccountService_CheckEmailExists_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // AccountServiceServer is the server API for AccountService service.
 // All implementations must embed UnimplementedAccountServiceServer
 // for forward compatibility.
@@ -80,6 +92,7 @@ type AccountServiceServer interface {
 	CreateOrUpdateAccount(context.Context, *CreateOrUpdateAccountRequest) (*CreateOrUpdateAccountResponse, error)
 	GetAccountByID(context.Context, *GetAccountByIDRequest) (*GetAccountByIDResponse, error)
 	ListAccounts(context.Context, *ListAccountsRequest) (*ListAccountsResponse, error)
+	CheckEmailExists(context.Context, *CheckEmailExistsRequest) (*CheckEmailExistsResponse, error)
 	mustEmbedUnimplementedAccountServiceServer()
 }
 
@@ -98,6 +111,9 @@ func (UnimplementedAccountServiceServer) GetAccountByID(context.Context, *GetAcc
 }
 func (UnimplementedAccountServiceServer) ListAccounts(context.Context, *ListAccountsRequest) (*ListAccountsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListAccounts not implemented")
+}
+func (UnimplementedAccountServiceServer) CheckEmailExists(context.Context, *CheckEmailExistsRequest) (*CheckEmailExistsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method CheckEmailExists not implemented")
 }
 func (UnimplementedAccountServiceServer) mustEmbedUnimplementedAccountServiceServer() {}
 func (UnimplementedAccountServiceServer) testEmbeddedByValue()                        {}
@@ -174,6 +190,24 @@ func _AccountService_ListAccounts_Handler(srv interface{}, ctx context.Context, 
 	return interceptor(ctx, in, info, handler)
 }
 
+func _AccountService_CheckEmailExists_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CheckEmailExistsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AccountServiceServer).CheckEmailExists(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AccountService_CheckEmailExists_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AccountServiceServer).CheckEmailExists(ctx, req.(*CheckEmailExistsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // AccountService_ServiceDesc is the grpc.ServiceDesc for AccountService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -192,6 +226,10 @@ var AccountService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ListAccounts",
 			Handler:    _AccountService_ListAccounts_Handler,
+		},
+		{
+			MethodName: "CheckEmailExists",
+			Handler:    _AccountService_CheckEmailExists_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

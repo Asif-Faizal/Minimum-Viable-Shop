@@ -2,7 +2,6 @@ package account
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"net"
 	"net/http"
@@ -12,6 +11,7 @@ import (
 	"google.golang.org/grpc/reflection"
 
 	pb "github.com/Asif-Faizal/Minimum-Viable-Shop/account/pb"
+	"github.com/Asif-Faizal/Minimum-Viable-Shop/util"
 )
 
 type GrpcServer struct {
@@ -57,21 +57,40 @@ func ListenRestServer(service Service, logger Logger, port int) error {
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/health", server.handleHealth)
+	mux.HandleFunc("/accounts/check-email", server.handleCheckEmail)
 
 	return http.ListenAndServe(addr, mux)
 }
 
 func (s *restServer) handleHealth(w http.ResponseWriter, r *http.Request) {
-	s.logger.Transport().Info().
-		Str("method", r.Method).
-		Str("path", r.URL.Path).
-		Msg("REST Request")
-
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(map[string]string{
-		"status":  "healthy",
+	util.WriteJSONResponse(w, http.StatusOK, true, "", map[string]string{
 		"service": "account",
+	})
+}
+
+func (s *restServer) handleCheckEmail(w http.ResponseWriter, r *http.Request) {
+	email := r.URL.Query().Get("email")
+	if email == "" {
+		http.Error(w, "email is required", http.StatusBadRequest)
+		return
+	}
+
+	exists, err := s.service.CheckEmailExists(r.Context(), email)
+	if err != nil {
+		s.logger.Service().Error().Err(err).Msg("failed to check if email exists")
+		util.WriteJSONResponse(w, http.StatusInternalServerError, false, err.Error(), nil)
+		return
+	}
+
+	message := ""
+	if exists {
+		message = "Email already exists"
+	} else {
+		message = "Email is available"
+	}
+
+	util.WriteJSONResponse(w, http.StatusOK, true, message, map[string]bool{
+		"exists": exists,
 	})
 }
 
@@ -122,4 +141,12 @@ func (server *GrpcServer) ListAccounts(ctx context.Context, request *pb.ListAcco
 		})
 	}
 	return &pb.ListAccountsResponse{Accounts: accounts}, nil
+}
+
+func (server *GrpcServer) CheckEmailExists(ctx context.Context, request *pb.CheckEmailExistsRequest) (*pb.CheckEmailExistsResponse, error) {
+	exists, err := server.accountService.CheckEmailExists(ctx, request.Email)
+	if err != nil {
+		return nil, err
+	}
+	return &pb.CheckEmailExistsResponse{Exists: exists}, nil
 }

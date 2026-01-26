@@ -40,8 +40,17 @@ message ListAccountsResponse {
   repeated Account accounts = 1;
 }
 
+message CheckEmailExistsRequest {
+  string email = 1;
+}
+
+message CheckEmailExistsResponse {
+  bool exists = 1;
+}
+
 service AccountService {
   rpc CreateOrUpdateAccount(CreateOrUpdateAccountRequest) returns (CreateOrUpdateAccountResponse);
   rpc GetAccountByID(GetAccountByIDRequest) returns (GetAccountByIDResponse);
   rpc ListAccounts(ListAccountsRequest) returns (ListAccountsResponse);
+  rpc CheckEmailExists(CheckEmailExistsRequest) returns (CheckEmailExistsResponse);
 }

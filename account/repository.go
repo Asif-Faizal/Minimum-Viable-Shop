@@ -13,6 +13,7 @@ type Repository interface {
 	CreateOrUpdateAccount(ctx context.Context, account *Account) (*Account, error)
 	GetAccountById(ctx context.Context, id string) (*Account, error)
 	ListAccounts(ctx context.Context, skip uint, take uint) ([]*Account, error)
+	CheckEmailExists(ctx context.Context, email string) (bool, error)
 }
 
 type PostgresRepository struct {
@@ -110,4 +111,24 @@ func (repository *PostgresRepository) ListAccounts(ctx context.Context, skip uin
 		return nil, err
 	}
 	return accounts, nil
+}
+
+func (repository *PostgresRepository) CheckEmailExists(ctx context.Context, email string) (bool, error) {
+	start := time.Now()
+	query := "SELECT EXISTS(SELECT 1 FROM accounts WHERE email = $1)"
+
+	row := repository.db.QueryRowContext(ctx, query, email)
+	var exists bool
+	err := row.Scan(&exists)
+
+	repository.logger.Database().Debug().
+		Str("query", query).
+		Str("duration", time.Since(start).String()).
+		Bool("success", err == nil).
+		Msg("Query Row")
+
+	if err != nil {
+		return false, err
+	}
+	return exists, nil
 }

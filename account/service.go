@@ -11,6 +11,7 @@ type Service interface {
 	CreateOrUpdateAccount(ctx context.Context, account *Account) (*Account, error)
 	GetAccountByID(ctx context.Context, id string) (*Account, error)
 	ListAccounts(ctx context.Context, skip uint, take uint) ([]*Account, error)
+	CheckEmailExists(ctx context.Context, email string) (bool, error)
 }
 
 type AccountService struct {
@@ -63,4 +64,12 @@ func (service *AccountService) ListAccounts(ctx context.Context, skip uint, take
 		return nil, err
 	}
 	return accounts, nil
+}
+
+func (service *AccountService) CheckEmailExists(ctx context.Context, email string) (bool, error) {
+	exists, err := service.repository.CheckEmailExists(ctx, email)
+	if err != nil {
+		return false, err
+	}
+	return exists, nil
 }
