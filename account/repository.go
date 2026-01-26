@@ -16,7 +16,16 @@ type Repository interface {
 	ListAccounts(ctx context.Context, skip uint, take uint) ([]*Account, error)
 	CheckEmailExists(ctx context.Context, email string) (bool, error)
 	GetAccountByEmail(ctx context.Context, email string) (*Account, error)
-	CreateSession(ctx context.Context, session *Session) error
+
+	// Session Management
+	CreateOrUpdateSession(ctx context.Context, session *Session) error
+	GetSession(ctx context.Context, id string) (*Session, error)
+	GetSessionByRefreshToken(ctx context.Context, refreshToken string) (*Session, error)
+	UpdateSession(ctx context.Context, session *Session) error
+	RevokeSessionByAccessToken(ctx context.Context, accessToken string) error
+
+	// Device Info
+	CreateOrUpdateDeviceInfo(ctx context.Context, info *DeviceInfo) error
 }
 
 type PostgresRepository struct {
@@ -158,18 +167,141 @@ func (repository *PostgresRepository) GetAccountByEmail(ctx context.Context, ema
 	return account, nil
 }
 
-func (repository *PostgresRepository) CreateSession(ctx context.Context, session *Session) error {
+func (repository *PostgresRepository) CreateOrUpdateSession(ctx context.Context, session *Session) error {
 	start := time.Now()
-	query := "INSERT INTO sessions (id, account_id, access_token, refresh_token, expires_at, created_at, is_revoked) VALUES ($1, $2, $3, $4, $5, $6, $7)"
+	query := `
+		INSERT INTO sessions (id, account_id, device_id, access_token, refresh_token, expires_at, created_at, is_revoked)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+		ON CONFLICT (account_id, device_id) 
+		DO UPDATE SET 
+			id = $1,
+			access_token = $4,
+			refresh_token = $5,
+			expires_at = $6,
+			is_revoked = $8
+	`
 
 	_, err := repository.db.ExecContext(ctx, query,
 		session.ID,
 		session.AccountID,
+		session.DeviceID,
 		session.AccessToken,
 		session.RefreshToken,
 		session.ExpiresAt,
 		session.CreatedAt,
 		session.IsRevoked,
+	)
+
+	repository.logger.Database().Debug().
+		Str("query", query).
+		Str("duration", time.Since(start).String()).
+		Bool("success", err == nil).
+		Msg("Execute Query")
+
+	return err
+}
+
+func (repository *PostgresRepository) GetSession(ctx context.Context, id string) (*Session, error) {
+	start := time.Now()
+	query := "SELECT id, account_id, device_id, access_token, refresh_token, expires_at, created_at, is_revoked FROM sessions WHERE id = $1"
+
+	row := repository.db.QueryRowContext(ctx, query, id)
+	session := &Session{}
+	err := row.Scan(&session.ID, &session.AccountID, &session.DeviceID, &session.AccessToken, &session.RefreshToken, &session.ExpiresAt, &session.CreatedAt, &session.IsRevoked)
+
+	repository.logger.Database().Debug().
+		Str("query", query).
+		Str("duration", time.Since(start).String()).
+		Bool("success", err == nil).
+		Msg("Query Row")
+
+	if err != nil {
+		return nil, err
+	}
+	return session, nil
+}
+
+func (repository *PostgresRepository) GetSessionByRefreshToken(ctx context.Context, refreshToken string) (*Session, error) {
+	start := time.Now()
+	query := "SELECT id, account_id, device_id, access_token, refresh_token, expires_at, created_at, is_revoked FROM sessions WHERE refresh_token = $1 AND is_revoked = false"
+
+	row := repository.db.QueryRowContext(ctx, query, refreshToken)
+	session := &Session{}
+	err := row.Scan(&session.ID, &session.AccountID, &session.DeviceID, &session.AccessToken, &session.RefreshToken, &session.ExpiresAt, &session.CreatedAt, &session.IsRevoked)
+
+	repository.logger.Database().Debug().
+		Str("query", query).
+		Str("duration", time.Since(start).String()).
+		Bool("success", err == nil).
+		Msg("Query Row")
+
+	if err != nil {
+		return nil, err
+	}
+	return session, nil
+}
+
+func (repository *PostgresRepository) UpdateSession(ctx context.Context, session *Session) error {
+	start := time.Now()
+	query := "UPDATE sessions SET access_token = $1, refresh_token = $2, expires_at = $3, is_revoked = $4 WHERE id = $5"
+
+	_, err := repository.db.ExecContext(ctx, query,
+		session.AccessToken,
+		session.RefreshToken,
+		session.ExpiresAt,
+		session.IsRevoked,
+		session.ID,
+	)
+
+	repository.logger.Database().Debug().
+		Str("query", query).
+		Str("duration", time.Since(start).String()).
+		Bool("success", err == nil).
+		Msg("Execute Query")
+
+	return err
+}
+
+func (repository *PostgresRepository) RevokeSessionByAccessToken(ctx context.Context, accessToken string) error {
+	start := time.Now()
+	query := "UPDATE sessions SET is_revoked = true WHERE access_token = $1"
+
+	_, err := repository.db.ExecContext(ctx, query, accessToken)
+
+	repository.logger.Database().Debug().
+		Str("query", query).
+		Str("duration", time.Since(start).String()).
+		Bool("success", err == nil).
+		Msg("Execute Query")
+
+	return err
+}
+
+func (repository *PostgresRepository) CreateOrUpdateDeviceInfo(ctx context.Context, info *DeviceInfo) error {
+	start := time.Now()
+	query := `
+		INSERT INTO device_info (id, session_id, device_type, device_model, device_os, device_os_version, ip_address, user_agent, created_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+		ON CONFLICT (session_id) 
+		DO UPDATE SET 
+			device_type = $3,
+			device_model = $4,
+			device_os = $5,
+			device_os_version = $6,
+			ip_address = $7,
+			user_agent = $8
+	`
+
+	_, err := repository.db.ExecContext(ctx, query,
+		info.ID,
+		info.SessionID,
+		info.DeviceType,
+		info.DeviceModel,
+		info.DeviceOS,
+		info.DeviceOSVersion,
+		info.IPAddress,
+		info.UserAgent,
+		info.CreatedAt,
 	)
 
 	repository.logger.Database().Debug().

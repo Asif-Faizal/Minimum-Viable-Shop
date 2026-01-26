@@ -51,17 +51,9 @@ func ListenGrpcServer(service Service, logger util.Logger, port int) error {
 
 func ListenRestServer(service Service, logger util.Logger, port int) error {
 	addr := fmt.Sprintf(":%d", port)
-	server := &restServer{
-		service: service,
-		logger:  logger,
-	}
+	handler := NewRestHandler(service, logger)
 
-	mux := http.NewServeMux()
-	mux.HandleFunc("/health", server.handleHealth)
-	mux.HandleFunc("/accounts/check-email", server.handleCheckEmail)
-	mux.HandleFunc("/accounts/login", server.handleLogin)
-
-	return http.ListenAndServe(addr, mux)
+	return http.ListenAndServe(addr, handler)
 }
 
 func (s *restServer) handleHealth(w http.ResponseWriter, r *http.Request) {
@@ -108,13 +100,75 @@ func (s *restServer) handleLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	response, err := s.service.Login(r.Context(), req.Email, req.Password)
+	deviceID := r.Header.Get("X-Device-ID")
+	if deviceID == "" {
+		util.WriteJSONResponse(w, http.StatusBadRequest, false, "X-Device-ID header is required", nil)
+		return
+	}
+
+	ip := r.Header.Get("X-Forwarded-For")
+	if ip == "" {
+		ip = r.RemoteAddr
+	}
+
+	deviceInfo := &DeviceInfo{
+		DeviceType:      r.Header.Get("X-Device-Type"),
+		DeviceModel:     r.Header.Get("X-Device-Model"),
+		DeviceOS:        r.Header.Get("X-Device-OS"),
+		DeviceOSVersion: r.Header.Get("X-Device-OS-Version"),
+		UserAgent:       r.Header.Get("User-Agent"),
+		IPAddress:       ip,
+	}
+
+	response, err := s.service.Login(r.Context(), req.Email, req.Password, deviceID, deviceInfo)
 	if err != nil {
 		util.WriteJSONResponse(w, http.StatusUnauthorized, false, err.Error(), nil)
 		return
 	}
 
 	util.WriteJSONResponse(w, http.StatusOK, true, "Login successful", response)
+}
+
+func (s *restServer) handleLogout(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	authHeader := r.Header.Get("Authorization")
+	if len(authHeader) < 7 || authHeader[:7] != "Bearer " {
+		util.WriteJSONResponse(w, http.StatusUnauthorized, false, "unauthorized", nil)
+		return
+	}
+	accessToken := authHeader[7:]
+
+	if err := s.service.Logout(r.Context(), accessToken); err != nil {
+		util.WriteJSONResponse(w, http.StatusInternalServerError, false, err.Error(), nil)
+		return
+	}
+
+	util.WriteJSONResponse(w, http.StatusOK, true, "Logged out successfully", nil)
+}
+
+func (s *restServer) handleRefreshToken(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var req RefreshRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		util.WriteJSONResponse(w, http.StatusBadRequest, false, "invalid request body", nil)
+		return
+	}
+
+	response, err := s.service.RefreshToken(r.Context(), req.RefreshToken)
+	if err != nil {
+		util.WriteJSONResponse(w, http.StatusUnauthorized, false, err.Error(), nil)
+		return
+	}
+
+	util.WriteJSONResponse(w, http.StatusOK, true, "Token refreshed successfully", response)
 }
 
 func (server *GrpcServer) CreateOrUpdateAccount(ctx context.Context, request *pb.CreateOrUpdateAccountRequest) (*pb.CreateOrUpdateAccountResponse, error) {

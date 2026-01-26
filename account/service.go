@@ -14,7 +14,9 @@ type Service interface {
 	GetAccountByID(ctx context.Context, id string) (*Account, error)
 	ListAccounts(ctx context.Context, skip uint, take uint) ([]*Account, error)
 	CheckEmailExists(ctx context.Context, email string) (bool, error)
-	Login(ctx context.Context, email string, password string) (*AuthenticatedResponse, error)
+	Login(ctx context.Context, email string, password string, deviceID string, deviceInfo *DeviceInfo) (*AuthenticatedResponse, error)
+	Logout(ctx context.Context, accessToken string) error
+	RefreshToken(ctx context.Context, refreshToken string) (*AuthenticatedResponse, error)
 }
 
 type AccountService struct {
@@ -90,7 +92,7 @@ func (service *AccountService) CheckEmailExists(ctx context.Context, email strin
 	return exists, nil
 }
 
-func (service *AccountService) Login(ctx context.Context, email string, password string) (*AuthenticatedResponse, error) {
+func (service *AccountService) Login(ctx context.Context, email string, password string, deviceID string, deviceInfo *DeviceInfo) (*AuthenticatedResponse, error) {
 	account, err := service.repository.GetAccountByEmail(ctx, email)
 	if err != nil {
 		return nil, errors.New("invalid email or password")
@@ -113,6 +115,7 @@ func (service *AccountService) Login(ctx context.Context, email string, password
 	session := &Session{
 		ID:           ksuid.New().String(),
 		AccountID:    account.ID,
+		DeviceID:     deviceID,
 		AccessToken:  accessToken,
 		RefreshToken: refreshToken,
 		ExpiresAt:    time.Now().Add(service.refreshTokenExpiry),
@@ -120,13 +123,68 @@ func (service *AccountService) Login(ctx context.Context, email string, password
 		IsRevoked:    false,
 	}
 
-	if err := service.repository.CreateSession(ctx, session); err != nil {
+	if err := service.repository.CreateOrUpdateSession(ctx, session); err != nil {
 		return nil, err
+	}
+
+	if deviceInfo != nil {
+		deviceInfo.ID = ksuid.New().String()
+		deviceInfo.SessionID = session.ID
+		deviceInfo.CreatedAt = time.Now()
+		if err := service.repository.CreateOrUpdateDeviceInfo(ctx, deviceInfo); err != nil {
+			return nil, err
+		}
 	}
 
 	return &AuthenticatedResponse{
 		Account:      account,
 		AccessToken:  accessToken,
 		RefreshToken: refreshToken,
+	}, nil
+}
+
+func (service *AccountService) Logout(ctx context.Context, accessToken string) error {
+	return service.repository.RevokeSessionByAccessToken(ctx, accessToken)
+}
+
+func (service *AccountService) RefreshToken(ctx context.Context, refreshToken string) (*AuthenticatedResponse, error) {
+	session, err := service.repository.GetSessionByRefreshToken(ctx, refreshToken)
+	if err != nil {
+		return nil, errors.New("invalid or expired refresh token")
+	}
+
+	if session.ExpiresAt.Before(time.Now()) {
+		session.IsRevoked = true
+		_ = service.repository.UpdateSession(ctx, session)
+		return nil, errors.New("refresh token expired")
+	}
+
+	account, err := service.repository.GetAccountById(ctx, session.AccountID)
+	if err != nil {
+		return nil, err
+	}
+
+	newAccessToken, err := util.GenerateToken(account.ID, account.Email, service.jwtSecret, service.accessTokenExpiry)
+	if err != nil {
+		return nil, err
+	}
+
+	newRefreshToken, err := util.GenerateToken(account.ID, account.Email, service.jwtSecret, service.refreshTokenExpiry)
+	if err != nil {
+		return nil, err
+	}
+
+	session.AccessToken = newAccessToken
+	session.RefreshToken = newRefreshToken
+	session.ExpiresAt = time.Now().Add(service.refreshTokenExpiry)
+
+	if err := service.repository.UpdateSession(ctx, session); err != nil {
+		return nil, err
+	}
+
+	return &AuthenticatedResponse{
+		Account:      account,
+		AccessToken:  newAccessToken,
+		RefreshToken: newRefreshToken,
 	}, nil
 }
