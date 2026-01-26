@@ -105,7 +105,10 @@ func (service *AccountService) Login(ctx context.Context, email string, password
 		return nil, err
 	}
 
-	refreshToken := ksuid.New().String()
+	refreshToken, err := util.GenerateToken(account.ID, account.Email, service.jwtSecret, service.refreshTokenExpiry)
+	if err != nil {
+		return nil, err
+	}
 
 	session := &Session{
 		ID:           ksuid.New().String(),

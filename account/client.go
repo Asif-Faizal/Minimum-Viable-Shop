@@ -63,26 +63,3 @@ func (client *AccountClient) ListAccounts(ctx context.Context, skip uint32, take
 	}
 	return response, nil
 }
-
-// Check Email Exists
-func (client *AccountClient) CheckEmailExists(ctx context.Context, email string) (bool, error) {
-	response, err := client.client.CheckEmailExists(ctx, &pb.CheckEmailExistsRequest{
-		Email: email,
-	})
-	if err != nil {
-		return false, err
-	}
-	return response.Exists, nil
-}
-
-// Login
-func (client *AccountClient) Login(ctx context.Context, email, password string) (*pb.LoginResponse, error) {
-	response, err := client.client.Login(ctx, &pb.LoginRequest{
-		Email:    email,
-		Password: password,
-	})
-	if err != nil {
-		return nil, err
-	}
-	return response, nil
-}

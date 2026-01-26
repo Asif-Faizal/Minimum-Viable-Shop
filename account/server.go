@@ -165,27 +165,3 @@ func (server *GrpcServer) ListAccounts(ctx context.Context, request *pb.ListAcco
 	}
 	return &pb.ListAccountsResponse{Accounts: accounts}, nil
 }
-
-func (server *GrpcServer) CheckEmailExists(ctx context.Context, request *pb.CheckEmailExistsRequest) (*pb.CheckEmailExistsResponse, error) {
-	exists, err := server.accountService.CheckEmailExists(ctx, request.Email)
-	if err != nil {
-		return nil, err
-	}
-	return &pb.CheckEmailExistsResponse{Exists: exists}, nil
-}
-
-func (server *GrpcServer) Login(ctx context.Context, request *pb.LoginRequest) (*pb.LoginResponse, error) {
-	account, err := server.accountService.Login(ctx, request.Email, request.Password)
-	if err != nil {
-		return nil, err
-	}
-	return &pb.LoginResponse{
-		Account: &pb.Account{
-			Id:    account.Account.ID,
-			Name:  account.Account.Name,
-			Email: account.Account.Email,
-		},
-		AccessToken:  account.AccessToken,
-		RefreshToken: account.RefreshToken,
-	}, nil
-}
