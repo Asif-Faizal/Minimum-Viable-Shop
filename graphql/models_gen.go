@@ -9,6 +9,7 @@ import (
 type AccountInput struct {
 	ID       *string `json:"id,omitempty"`
 	Name     *string `json:"name,omitempty"`
+	UserType string  `json:"userType"`
 	Email    string  `json:"email"`
 	Password string  `json:"password"`
 }

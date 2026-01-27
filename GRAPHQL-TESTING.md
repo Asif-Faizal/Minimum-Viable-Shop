@@ -11,6 +11,7 @@ Mandatory fields: `email`, `password`. `name` is optional.
 mutation CreateAccount {
   createAccount(input: {
     name: "John Doe"
+    userType: "super_admin"
     email: "john@example.com"
     password: "password123"
   }) {

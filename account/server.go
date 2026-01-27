@@ -2,10 +2,8 @@ package account
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"net"
-	"net/http"
 
 	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	"google.golang.org/grpc"
@@ -19,11 +17,6 @@ type GrpcServer struct {
 	accountService Service
 	logger         util.Logger
 	pb.UnimplementedAccountServiceServer
-}
-
-type restServer struct {
-	service Service
-	logger  util.Logger
 }
 
 func ListenGrpcServer(service Service, logger util.Logger, port int) error {
@@ -49,139 +42,18 @@ func ListenGrpcServer(service Service, logger util.Logger, port int) error {
 	return grpcServer.Serve(lis)
 }
 
-func ListenRestServer(service Service, logger util.Logger, port int) error {
-	addr := fmt.Sprintf(":%d", port)
-	handler := NewRestHandler(service, logger)
-
-	return http.ListenAndServe(addr, handler)
-}
-
-func (s *restServer) HealthCheck(w http.ResponseWriter, r *http.Request) {
-	util.WriteJSONResponse(w, http.StatusOK, true, "", map[string]string{
-		"service": "account",
-	})
-}
-
-func (s *restServer) HandleCheckEmail(w http.ResponseWriter, r *http.Request) {
-	email := r.URL.Query().Get("email")
-	if email == "" {
-		http.Error(w, "email is required", http.StatusBadRequest)
-		return
-	}
-
-	exists, err := s.service.CheckEmailExists(r.Context(), email)
-	if err != nil {
-		s.logger.Service().Error().Err(err).Msg("failed to check if email exists")
-		util.WriteJSONResponse(w, http.StatusInternalServerError, false, err.Error(), nil)
-		return
-	}
-
-	message := ""
-	if exists {
-		message = "Email already exists"
-	} else {
-		message = "Email is available"
-	}
-
-	util.WriteJSONResponse(w, http.StatusOK, true, message, map[string]bool{
-		"exists": exists,
-	})
-}
-
-func (s *restServer) HandleLogin(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
-	var req LoginRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		util.WriteJSONResponse(w, http.StatusBadRequest, false, "invalid request body", nil)
-		return
-	}
-
-	dInfo, err := util.ExtractDeviceInfo(r)
-	if err != nil {
-		util.WriteJSONResponse(w, http.StatusBadRequest, false, err.Error(), nil)
-		return
-	}
-
-	deviceInfo := &DeviceInfo{
-		DeviceType:      dInfo.DeviceType,
-		DeviceModel:     dInfo.DeviceModel,
-		DeviceOS:        dInfo.DeviceOS,
-		DeviceOSVersion: dInfo.DeviceOSVersion,
-		UserAgent:       dInfo.UserAgent,
-		IPAddress:       dInfo.IPAddress,
-	}
-
-	response, err := s.service.Login(r.Context(), req.Email, req.Password, dInfo.DeviceID, deviceInfo)
-	if err != nil {
-		util.WriteJSONResponse(w, http.StatusUnauthorized, false, err.Error(), nil)
-		return
-	}
-
-	util.WriteJSONResponse(w, http.StatusOK, true, "Login successful", response)
-}
-
-func (s *restServer) HandleLogout(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
-	authHeader := r.Header.Get("Authorization")
-	if len(authHeader) < 7 || authHeader[:7] != "Bearer " {
-		util.WriteJSONResponse(w, http.StatusUnauthorized, false, "unauthorized", nil)
-		return
-	}
-	accessToken := authHeader[7:]
-
-	dInfo, err := util.ExtractDeviceInfo(r)
-	if err != nil {
-		util.WriteJSONResponse(w, http.StatusBadRequest, false, err.Error(), nil)
-		return
-	}
-
-	if err := s.service.Logout(r.Context(), accessToken, dInfo.DeviceID); err != nil {
-		util.WriteJSONResponse(w, http.StatusInternalServerError, false, err.Error(), nil)
-		return
-	}
-
-	util.WriteJSONResponse(w, http.StatusOK, true, "Logged out successfully", nil)
-}
-
-func (s *restServer) HandleRefreshToken(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
-	var req RefreshRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		util.WriteJSONResponse(w, http.StatusBadRequest, false, "invalid request body", nil)
-		return
-	}
-
-	dInfo, err := util.ExtractDeviceInfo(r)
-	if err != nil {
-		util.WriteJSONResponse(w, http.StatusBadRequest, false, err.Error(), nil)
-		return
-	}
-
-	response, err := s.service.RefreshToken(r.Context(), req.RefreshToken, dInfo.DeviceID)
-	if err != nil {
-		util.WriteJSONResponse(w, http.StatusUnauthorized, false, err.Error(), nil)
-		return
-	}
-
-	util.WriteJSONResponse(w, http.StatusOK, true, "Token refreshed successfully", response)
-}
-
 func (server *GrpcServer) CreateOrUpdateAccount(ctx context.Context, request *pb.CreateOrUpdateAccountRequest) (*pb.CreateOrUpdateAccountResponse, error) {
+	if request.Usertype == "" {
+		return nil, fmt.Errorf("usertype is required")
+	}
+	if request.Email == "" {
+		return nil, fmt.Errorf("email is required")
+	}
+
 	account, err := server.accountService.CreateOrUpdateAccount(ctx, &Account{
 		ID:       request.Id,
 		Name:     request.Name,
+		UserType: request.Usertype,
 		Email:    request.Email,
 		Password: request.Password,
 	})
@@ -190,9 +62,10 @@ func (server *GrpcServer) CreateOrUpdateAccount(ctx context.Context, request *pb
 	}
 	return &pb.CreateOrUpdateAccountResponse{
 		Account: &pb.Account{
-			Id:    account.ID,
-			Name:  account.Name,
-			Email: account.Email,
+			Id:       account.ID,
+			Name:     account.Name,
+			Usertype: account.UserType,
+			Email:    account.Email,
 		},
 	}, nil
 }
@@ -204,9 +77,10 @@ func (server *GrpcServer) GetAccountByID(ctx context.Context, request *pb.GetAcc
 	}
 	return &pb.GetAccountByIDResponse{
 		Account: &pb.Account{
-			Id:    account.ID,
-			Name:  account.Name,
-			Email: account.Email,
+			Id:       account.ID,
+			Name:     account.Name,
+			Usertype: account.UserType,
+			Email:    account.Email,
 		},
 	}, nil
 }
@@ -217,12 +91,86 @@ func (server *GrpcServer) ListAccounts(ctx context.Context, request *pb.ListAcco
 		return nil, err
 	}
 	accounts := []*pb.Account{}
-	for _, a := range domainAccounts {
+	for _, account := range domainAccounts {
 		accounts = append(accounts, &pb.Account{
-			Id:    a.ID,
-			Name:  a.Name,
-			Email: a.Email,
+			Id:       account.ID,
+			Name:     account.Name,
+			Usertype: account.UserType,
+			Email:    account.Email,
 		})
 	}
 	return &pb.ListAccountsResponse{Accounts: accounts}, nil
+}
+
+func (server *GrpcServer) CheckEmailExists(ctx context.Context, request *pb.CheckEmailExistsRequest) (*pb.CheckEmailExistsResponse, error) {
+	exists, err := server.accountService.CheckEmailExists(ctx, request.Email)
+	if err != nil {
+		return nil, err
+	}
+	return &pb.CheckEmailExistsResponse{Exists: exists}, nil
+}
+
+func (server *GrpcServer) Login(ctx context.Context, request *pb.LoginRequest) (*pb.LoginResponse, error) {
+	var deviceInfo *DeviceInfo
+	if request.DeviceInfo != nil {
+		deviceInfo = &DeviceInfo{
+			DeviceType:      request.DeviceInfo.DeviceType,
+			DeviceModel:     request.DeviceInfo.DeviceModel,
+			DeviceOS:        request.DeviceInfo.DeviceOs,
+			DeviceOSVersion: request.DeviceInfo.DeviceOsVersion,
+			UserAgent:       request.DeviceInfo.UserAgent,
+			IPAddress:       request.DeviceInfo.IpAddress,
+		}
+	}
+
+	resp, err := server.accountService.Login(ctx, request.Email, request.Password, request.DeviceId, deviceInfo)
+	if err != nil {
+		return nil, err
+	}
+
+	var account *pb.Account
+	if resp.Account != nil {
+		account = &pb.Account{
+			Id:       resp.Account.ID,
+			Name:     resp.Account.Name,
+			Usertype: resp.Account.UserType,
+			Email:    resp.Account.Email,
+		}
+	}
+
+	return &pb.LoginResponse{
+		Account:      account,
+		AccessToken:  resp.AccessToken,
+		RefreshToken: resp.RefreshToken,
+	}, nil
+}
+
+func (server *GrpcServer) Logout(ctx context.Context, request *pb.LogoutRequest) (*pb.LogoutResponse, error) {
+	if err := server.accountService.Logout(ctx, request.AccessToken, request.DeviceId); err != nil {
+		return nil, err
+	}
+	return &pb.LogoutResponse{Success: true}, nil
+}
+
+func (server *GrpcServer) RefreshToken(ctx context.Context, request *pb.RefreshTokenRequest) (*pb.RefreshTokenResponse, error) {
+	resp, err := server.accountService.RefreshToken(ctx, request.RefreshToken, request.DeviceId)
+	if err != nil {
+		return nil, err
+	}
+
+	var account *pb.Account
+	if resp.Account != nil {
+		account = &pb.Account{
+			Id:       resp.Account.ID,
+			Name:     resp.Account.Name,
+			Usertype: resp.Account.UserType,
+			Email:    resp.Account.Email,
+		}
+	}
+
+	return &pb.RefreshTokenResponse{
+		Account:      account,
+		AccessToken:  resp.AccessToken,
+		RefreshToken: resp.RefreshToken,
+	}, nil
 }

@@ -24,6 +24,9 @@ func (r *mutationResolver) CreateAccount(ctx context.Context, input AccountInput
 	if input.Password == "" {
 		return nil, fmt.Errorf("account password is required")
 	}
+	if input.UserType == "" {
+		return nil, fmt.Errorf("account user_type is required")
+	}
 
 	// Determine ID: use provided ID or empty string for new account
 	id := ""
@@ -36,7 +39,7 @@ func (r *mutationResolver) CreateAccount(ctx context.Context, input AccountInput
 	if input.Name != nil {
 		name = *input.Name
 	}
-	resp, err := r.server.accountClient.CreateOrUpdateAccount(ctx, id, name, input.Email, input.Password)
+	resp, err := r.server.accountClient.CreateOrUpdateAccount(ctx, id, name, input.UserType, input.Email, input.Password)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create/update account: %w", err)
 	}
@@ -45,14 +48,11 @@ func (r *mutationResolver) CreateAccount(ctx context.Context, input AccountInput
 		return nil, fmt.Errorf("unexpected response from account service")
 	}
 
-	var accountName *string
-	if resp.Account.Name != "" {
-		accountName = &resp.Account.Name
-	}
 	return &Account{
-		ID:    resp.Account.Id,
-		Name:  accountName,
-		Email: resp.Account.Email,
+		ID:       resp.Account.Id,
+		Name:     resp.Account.Name,
+		UserType: resp.Account.Usertype,
+		Email:    resp.Account.Email,
 	}, nil
 }
 

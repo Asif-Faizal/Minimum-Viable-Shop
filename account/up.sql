@@ -1,6 +1,13 @@
+DO $$ BEGIN
+    CREATE TYPE user_type_enum AS ENUM ('super_admin', 'admin', 'merchant', 'customer');
+EXCEPTION
+    WHEN duplicate_object THEN null;
+END $$;
+
 CREATE TABLE IF NOT EXISTS accounts (
     id CHAR(27) PRIMARY KEY,
     name VARCHAR(24),
+    user_type user_type_enum NOT NULL,
     email VARCHAR(255) NOT NULL UNIQUE,
     password VARCHAR(255) NOT NULL
 );
@@ -9,8 +16,8 @@ CREATE TABLE IF NOT EXISTS sessions (
     id CHAR(27) PRIMARY KEY,
     account_id CHAR(27) NOT NULL,
     device_id VARCHAR(255) NOT NULL,
-    access_token VARCHAR(255) NOT NULL,
-    refresh_token VARCHAR(255) NOT NULL,
+    access_token TEXT NOT NULL,
+    refresh_token TEXT NOT NULL,
     expires_at TIMESTAMP NOT NULL,
     created_at TIMESTAMP NOT NULL,
     is_revoked BOOLEAN NOT NULL DEFAULT FALSE,

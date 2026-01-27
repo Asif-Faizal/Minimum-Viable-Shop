@@ -5,9 +5,10 @@ import (
 )
 
 type Account struct {
-	ID       string `json:"id" validate:"required,uuidv4"`
-	Name     string `json:"name" validate:"min=3,max=50"`
-	Email    string `json:"email" validate:"required,email,normalizeemail"`
+	ID       string `json:"id" validate:"required,uuid4"`
+	Name     string `json:"name" validate:"omitempty,min=3,max=50"`
+	UserType string `json:"user_type" validate:"required,oneof=super_admin admin merchant customer"`
+	Email    string `json:"email" validate:"required,email"`
 	Password string `json:"-" validate:"required,min=8,max=50"`
 }
 
@@ -38,13 +39,4 @@ type DeviceInfo struct {
 	IPAddress       string    `json:"ip_address"`
 	UserAgent       string    `json:"user_agent"`
 	CreatedAt       time.Time `json:"created_at"`
-}
-
-type LoginRequest struct {
-	Email    string `json:"email" validate:"required,email"`
-	Password string `json:"password" validate:"required"`
-}
-
-type RefreshRequest struct {
-	RefreshToken string `json:"refresh_token" validate:"required"`
 }

@@ -19,7 +19,7 @@ RUN CGO_ENABLED=0 GOOS=linux go build -o /build/account-server ./account/cmd/acc
 # Runtime stage
 FROM alpine:3.19
 
-RUN apk add --no-cache ca-certificates curl
+RUN apk add --no-cache ca-certificates
 
 WORKDIR /app
 
@@ -33,7 +33,6 @@ USER app
 EXPOSE 50051
 
 HEALTHCHECK --interval=15s --timeout=5s --retries=3 --start-period=10s \
-    CMD curl -f http://localhost:50051/health || exit 1
+    CMD test -f /app/account-server || exit 1
 
 CMD ["./account-server"]
-

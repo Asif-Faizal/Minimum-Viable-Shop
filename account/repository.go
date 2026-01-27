@@ -54,9 +54,9 @@ func (repository *PostgresRepository) Close() {
 
 func (repository *PostgresRepository) CreateOrUpdateAccount(ctx context.Context, account *Account) (*Account, error) {
 	start := time.Now()
-	query := "INSERT INTO accounts (id, name, email, password) VALUES ($1, NULLIF($2, ''), $3, $4) ON CONFLICT (id) DO UPDATE SET name = NULLIF($2, ''), email = $3, password = $4"
+	query := "INSERT INTO accounts (id, name, user_type, email, password) VALUES ($1, NULLIF($2, ''), $3, $4, $5) ON CONFLICT (id) DO UPDATE SET name = NULLIF($2, ''), user_type = $3, email = $4, password = $5"
 
-	_, err := repository.db.ExecContext(ctx, query, account.ID, account.Name, account.Email, account.Password)
+	_, err := repository.db.ExecContext(ctx, query, account.ID, account.Name, account.UserType, account.Email, account.Password)
 
 	repository.logger.Database().Debug().
 		Str("query", query).
@@ -72,12 +72,12 @@ func (repository *PostgresRepository) CreateOrUpdateAccount(ctx context.Context,
 
 func (repository *PostgresRepository) GetAccountById(ctx context.Context, id string) (*Account, error) {
 	start := time.Now()
-	query := "SELECT id, name, email FROM accounts WHERE id = $1"
+	query := "SELECT id, name, user_type, email FROM accounts WHERE id = $1"
 
 	row := repository.db.QueryRowContext(ctx, query, id)
 	account := &Account{}
 	var name sql.NullString
-	err := row.Scan(&account.ID, &name, &account.Email)
+	err := row.Scan(&account.ID, &name, &account.UserType, &account.Email)
 
 	repository.logger.Database().Debug().
 		Str("query", query).
@@ -94,7 +94,7 @@ func (repository *PostgresRepository) GetAccountById(ctx context.Context, id str
 
 func (repository *PostgresRepository) ListAccounts(ctx context.Context, skip uint, take uint) ([]*Account, error) {
 	start := time.Now()
-	query := "SELECT id, name, email FROM accounts ORDER by id DESC LIMIT $1 OFFSET $2"
+	query := "SELECT id, name, user_type, email FROM accounts ORDER by id DESC LIMIT $1 OFFSET $2"
 
 	rows, err := repository.db.QueryContext(ctx, query, take, skip)
 
@@ -113,7 +113,7 @@ func (repository *PostgresRepository) ListAccounts(ctx context.Context, skip uin
 	for rows.Next() {
 		account := &Account{}
 		var name sql.NullString
-		if err := rows.Scan(&account.ID, &name, &account.Email); err != nil {
+		if err := rows.Scan(&account.ID, &name, &account.UserType, &account.Email); err != nil {
 			return nil, err
 		}
 		account.Name = name.String
@@ -147,12 +147,12 @@ func (repository *PostgresRepository) CheckEmailExists(ctx context.Context, emai
 
 func (repository *PostgresRepository) GetAccountByEmail(ctx context.Context, email string) (*Account, error) {
 	start := time.Now()
-	query := "SELECT id, name, email, password FROM accounts WHERE email = $1"
+	query := "SELECT id, name, user_type, email, password FROM accounts WHERE email = $1"
 
 	row := repository.db.QueryRowContext(ctx, query, email)
 	account := &Account{}
 	var name sql.NullString
-	err := row.Scan(&account.ID, &name, &account.Email, &account.Password)
+	err := row.Scan(&account.ID, &name, &account.UserType, &account.Email, &account.Password)
 
 	repository.logger.Database().Debug().
 		Str("query", query).

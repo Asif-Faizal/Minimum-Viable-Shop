@@ -59,9 +59,9 @@ func main() {
 	}
 
 	// Create reverse proxies
-	authProxy := httputil.NewSingleHostReverseProxy(authTarget)
-	authProxy.Transport = transport
-	authProxy.ErrorHandler = func(w http.ResponseWriter, r *http.Request, err error) {
+	restProxy := httputil.NewSingleHostReverseProxy(authTarget)
+	restProxy.Transport = transport
+	restProxy.ErrorHandler = func(w http.ResponseWriter, r *http.Request, err error) {
 		logger.Transport().Error().Err(err).Str("method", r.Method).Str("path", r.URL.Path).Msg("Proxy Error")
 		http.Error(w, "Service temporarily unavailable", http.StatusServiceUnavailable)
 	}
@@ -79,9 +79,9 @@ func main() {
 		logger.Transport().Info().Str("method", r.Method).Str("path", r.URL.Path).Msg("Proxying request")
 
 		// Route based on path
-		if strings.HasPrefix(r.URL.Path, "/auth") {
-			r.URL.Path = strings.TrimPrefix(r.URL.Path, "/auth")
-			authProxy.ServeHTTP(w, r)
+		if strings.HasPrefix(r.URL.Path, "/rest") {
+			r.URL.Path = strings.TrimPrefix(r.URL.Path, "/rest")
+			restProxy.ServeHTTP(w, r)
 		} else {
 			// Everything else goes to GraphQL
 			gqlProxy.ServeHTTP(w, r)

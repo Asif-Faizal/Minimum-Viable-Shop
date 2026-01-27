@@ -41,6 +41,13 @@ func NewAccountService(
 }
 
 func (service *AccountService) CreateOrUpdateAccount(ctx context.Context, account *Account) (*Account, error) {
+	if account.UserType == "" {
+		return nil, errors.New("user_type is required")
+	}
+	if account.Email == "" {
+		return nil, errors.New("email is required")
+	}
+
 	id := account.ID
 	if id == "" {
 		id = ksuid.New().String()
@@ -56,6 +63,7 @@ func (service *AccountService) CreateOrUpdateAccount(ctx context.Context, accoun
 	newAccount := &Account{
 		ID:       id,
 		Name:     account.Name,
+		UserType: account.UserType,
 		Email:    account.Email,
 		Password: hashed,
 	}
@@ -102,12 +110,12 @@ func (service *AccountService) Login(ctx context.Context, email string, password
 		return nil, errors.New("invalid email or password")
 	}
 
-	accessToken, err := util.GenerateToken(account.ID, account.Email, service.jwtSecret, service.accessTokenExpiry)
+	accessToken, err := util.GenerateToken(account.ID, account.UserType, account.Email, service.jwtSecret, service.accessTokenExpiry)
 	if err != nil {
 		return nil, err
 	}
 
-	refreshToken, err := util.GenerateToken(account.ID, account.Email, service.jwtSecret, service.refreshTokenExpiry)
+	refreshToken, err := util.GenerateToken(account.ID, account.UserType, account.Email, service.jwtSecret, service.refreshTokenExpiry)
 	if err != nil {
 		return nil, err
 	}
@@ -191,12 +199,12 @@ func (service *AccountService) RefreshToken(ctx context.Context, refreshToken st
 		return nil, err
 	}
 
-	newAccessToken, err := util.GenerateToken(account.ID, account.Email, service.jwtSecret, service.accessTokenExpiry)
+	newAccessToken, err := util.GenerateToken(account.ID, account.UserType, account.Email, service.jwtSecret, service.accessTokenExpiry)
 	if err != nil {
 		return nil, err
 	}
 
-	newRefreshToken, err := util.GenerateToken(account.ID, account.Email, service.jwtSecret, service.refreshTokenExpiry)
+	newRefreshToken, err := util.GenerateToken(account.ID, account.UserType, account.Email, service.jwtSecret, service.refreshTokenExpiry)
 	if err != nil {
 		return nil, err
 	}

@@ -8,15 +8,17 @@ option go_package = "./";
 message Account {
   string id = 1;
   string name = 2;
-  string email = 3;
-  string password = 4;
+  string usertype = 3;
+  string email = 4;
+  string password = 5;
 }
 
 message CreateOrUpdateAccountRequest {
   string id = 1;
   string name = 2;
-  string email = 3;
-  string password = 4;
+  string usertype = 3;
+  string email = 4;
+  string password = 5;
 }
 
 message CreateOrUpdateAccountResponse {
@@ -40,8 +42,62 @@ message ListAccountsResponse {
   repeated Account accounts = 1;
 }
 
+message CheckEmailExistsRequest {
+  string email = 1;
+}
+
+message CheckEmailExistsResponse {
+  bool exists = 1;
+}
+
+message DeviceInfo {
+  string device_type = 1;
+  string device_model = 2;
+  string device_os = 3;
+  string device_os_version = 4;
+  string user_agent = 5;
+  string ip_address = 6;
+}
+
+message LoginRequest {
+  string email = 1;
+  string password = 2;
+  string device_id = 3;
+  DeviceInfo device_info = 4;
+}
+
+message LoginResponse {
+  Account account = 1;
+  string access_token = 2;
+  string refresh_token = 3;
+}
+
+message LogoutRequest {
+  string access_token = 1;
+  string device_id = 2;
+}
+
+message LogoutResponse {
+  bool success = 1;
+}
+
+message RefreshTokenRequest {
+  string refresh_token = 1;
+  string device_id = 2;
+}
+
+message RefreshTokenResponse {
+  Account account = 1;
+  string access_token = 2;
+  string refresh_token = 3;
+}
+
 service AccountService {
   rpc CreateOrUpdateAccount(CreateOrUpdateAccountRequest) returns (CreateOrUpdateAccountResponse);
   rpc GetAccountByID(GetAccountByIDRequest) returns (GetAccountByIDResponse);
   rpc ListAccounts(ListAccountsRequest) returns (ListAccountsResponse);
+  rpc CheckEmailExists(CheckEmailExistsRequest) returns (CheckEmailExistsResponse);
+  rpc Login(LoginRequest) returns (LoginResponse);
+  rpc Logout(LogoutRequest) returns (LogoutResponse);
+  rpc RefreshToken(RefreshTokenRequest) returns (RefreshTokenResponse);
 }

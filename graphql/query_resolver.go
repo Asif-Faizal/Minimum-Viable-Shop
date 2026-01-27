@@ -20,15 +20,12 @@ func (r *queryResolver) Accounts(ctx context.Context, pagination *PaginationInpu
 		if accountResp == nil || accountResp.Account == nil {
 			return nil, fmt.Errorf("account not found: %s", *id)
 		}
-		var accountName *string
-		if accountResp.Account.Name != "" {
-			accountName = &accountResp.Account.Name
-		}
 		return []*Account{
 			{
-				ID:    accountResp.Account.Id,
-				Name:  accountName,
-				Email: accountResp.Account.Email,
+				ID:       accountResp.Account.Id,
+				Name:     accountResp.Account.Name,
+				UserType: accountResp.Account.Usertype,
+				Email:    accountResp.Account.Email,
 			},
 		}, nil
 	}
@@ -52,15 +49,12 @@ func (r *queryResolver) Accounts(ctx context.Context, pagination *PaginationInpu
 	}
 
 	accounts := make([]*Account, 0, len(accountsResp.Accounts))
-	for _, acc := range accountsResp.Accounts {
-		var accountName *string
-		if acc.Name != "" {
-			accountName = &acc.Name
-		}
+	for _, account := range accountsResp.Accounts {
 		accounts = append(accounts, &Account{
-			ID:    acc.Id,
-			Name:  accountName,
-			Email: acc.Email,
+			ID:       account.Id,
+			Name:     account.Name,
+			UserType: account.Usertype,
+			Email:    account.Email,
 		})
 	}
 	return accounts, nil
